@@ -14,20 +14,40 @@ license-file = "LICENSE"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-env_logger = "0.8.3"
+#env_logger = "0.8.3"
 #gfx = "0.18.2"
 #gfx-backend-dx12 = { version = "0.7.0", optional = true }
 #gfx-backend-empty = { version = "0.7.0", optional = true }
 #gfx-backend-metal = { version = "0.7.0", optional = true }
 #gfx-backend-vulkan = { version = "0.7.0", optional = true }
-image = "0.23.14"
+#image = "0.23.14"
 log = "0.4.14"
-#log4rs = "1.0.0"
-pollster = "0.2.2"
+log4rs = "1.0.0"
+#pollster = "0.2.2"
 rhai = "0.19.15"
-wgpu = "0.7.1"
-winit = "0.24.0"
+vulkano = "0.22.0"
+game-loop = "0.7.3"
+#wgpu = "0.7.1"
+#winit = "0.24.0"
 #shaderc = "0.7.2"
+
+[dependencies.sdl2]
+version = "0.34.4"
+default-features = false
+features = ["ttf", "image", "gfx", "mixer", "static-link", "use-vcpkg"]
+
+[package.metadata.vcpkg]
+dependencies = ["sdl2[vulkan]", "sdl2-image[libwebp]", "sdl2-ttf", "sdl2-gfx", "sdl2-mixer"]
+git = "https://github.com/microsoft/vcpkg"
+rev = "030cfaa24de9ea1bbf0a4d9c615ce7312ba77af1"
+
+[package.metadata.vcpkg.target]
+x86_64-pc-windows-msvc = { triplet = "x64-windows-static-md" }
+x86_64-unknown-linux-gnu = { triplet = "x64-linux" }
+x86_64-apple-darwin = { triplet = "x64-osx" }
+aarch64-pc-windows-msvc = { triplet = "arm64-windows-static-md" }
+aarch64-unknown-linux-gnu = { triplet = "arm64-linux" }
+aarch64-apple-darwin = { triplet = "arm64-osx" }
 
 #[features]
 #default = ["vulkan"]

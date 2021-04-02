@@ -1,157 +1,60 @@
-/*
-#[cfg(feature = "dx11")]
-extern crate gfx_backend_dx11 as back;
-#[cfg(feature = "gl")]
-extern crate gfx_backend_gl as back;
-*/
+extern crate sdl2;
 
-/*#[cfg(feature = "vulkan")]
-extern crate gfx_backend_vulkan as back;
-#[cfg(feature = "metal")]
-extern crate gfx_backend_metal as back;
-#[cfg(feature = "dx12")]
-extern crate gfx_backend_dx12 as back;
-#[cfg(not(any(
-feature = "vulkan",
-feature = "dx11",
-feature = "dx12",
-feature = "metal",
-feature = "gl"
-)))]
-extern crate gfx_backend_empty as back;*/
+use sdl2::event::Event;
+use sdl2::keyboard::Keycode;
+use sdl2::pixels::PixelFormatEnum;
+use sdl2::rect::Rect;
+use vulkano::instance::{RawInstanceExtensions, Instance};
+use std::ffi::CString;
+use vulkano::VulkanObject;
+use vulkano::swapchain::Surface;
 
-extern crate wgpu;
-extern crate winit;
-
-use std::borrow::Cow;
-use winit::{
-    event::{Event, WindowEvent},
-    event_loop::{ControlFlow, EventLoop},
-    window::Window,
-};
-
-async fn run(event_loop: EventLoop<()>, window: Window) {
-    let size = window.inner_size();
-    let instance = wgpu::Instance::new(wgpu::BackendBit::all());
-    let surface = unsafe { instance.create_surface(&window) };
-    let adapter = instance
-        .request_adapter(&wgpu::RequestAdapterOptions {
-            power_preference: wgpu::PowerPreference::HighPerformance,
-            compatible_surface: Some(&surface),
-        })
-        .await
-        .expect("Failed to find a suitable adapter.");
-
-    let (device, queue) = adapter
-        .request_device(
-            &wgpu::DeviceDescriptor {
-                label: None,
-                features: wgpu::Features::empty(),
-                limits: wgpu::Limits::default(),
-            },
-            None,
-        )
-        .await
-        .expect("Failed to create a device.");
-
-    let shader = device.create_shader_module(&wgpu::ShaderModuleDescriptor {
-        label: None,
-        source: wgpu::ShaderSource::Wgsl(Cow::Borrowed(include_str!("shaders/d-shader.wgsl"))),
-        flags: wgpu::ShaderFlags::all(),
-    });
-
-    let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-        label: None,
-        bind_group_layouts: &[],
-        push_constant_ranges: &[],
-    });
-
-    let swap_chain_format = adapter.get_swap_chain_preferred_format(&surface);
-
-    let render_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-        label: None,
-        layout: Some(&pipeline_layout),
-        vertex: wgpu::VertexState {
-            module: &shader,
-            entry_point: "vs_main",
-            buffers: &[],
-        },
-        fragment: Some(wgpu::FragmentState {
-            module: &shader,
-            entry_point: "fs_main",
-            targets: &[swap_chain_format.into()],
-        }),
-        primitive: wgpu::PrimitiveState::default(),
-        depth_stencil: None,
-        multisample: wgpu::MultisampleState::default(),
-    });
-
-    let mut sc_desc = wgpu::SwapChainDescriptor {
-        usage: wgpu::TextureUsage::RENDER_ATTACHMENT,
-        format: swap_chain_format,
-        width: size.width,
-        height: size.height,
-        present_mode: wgpu::PresentMode::Mailbox,
-    };
-
-    let mut swap_chain = device.create_swap_chain(&surface, &sc_desc);
-
-    event_loop.run(move |event, _, control_flow| {
-        let _ = (&instance, &adapter, &shader, &pipeline_layout);
-
-        *control_flow = ControlFlow::Wait;
-        match event {
-            Event::WindowEvent {
-                event: WindowEvent::Resized(size),
-                ..
-            } => {
-                sc_desc.width = size.width;
-                sc_desc.height = size.height;
-                swap_chain = device.create_swap_chain(&surface, &sc_desc);
-            }
-            Event::RedrawRequested(_) => {
-                let frame = swap_chain
-                    .get_current_frame()
-                    .expect("Failed to acquire next swap chain texture.")
-                    .output;
-                let mut encoder =
-                    device.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
-
-                {
-                    let mut rpass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                        label: None,
-                        color_attachments: &[wgpu::RenderPassColorAttachmentDescriptor {
-                            attachment: &frame.view,
-                            resolve_target: None,
-                            ops: wgpu::Operations {
-                                load: wgpu::LoadOp::Clear(wgpu::Color::GREEN),
-                                store: true,
-                            },
-                        }],
-                        depth_stencil_attachment: None,
-                    });
-
-                    rpass.set_pipeline(&render_pipeline);
-                    rpass.draw(0..3, 0..1);
-                }
-
-                queue.submit(Some(encoder.finish()));
-            }
-            Event::WindowEvent {
-                event: WindowEvent::CloseRequested,
-                ..
-            } => *control_flow = ControlFlow::Exit,
-            _ => {}
-        }
-    });
-}
-
-fn main() {
+fn main() -> Result<(), String> {
     println!("Hello, world!");
 
-    let event_loop = EventLoop::new();
-    let window = winit::window::Window::new(&event_loop).unwrap();
+    let sdl_context = sdl2::init()?;
+    let video_subsystem = sdl_context.video()?;
 
-    env_logger::init();
-    pollster::block_on(run(event_loop, window));
+    let window = video_subsystem.window("snow-64 alpha", 512, 512).position_centered().vulkan().build().map_err(|e| e.to_string())?;
+
+    let instance_exts = window.vulkan_instance_extensions()?;
+    let raw_instance_exts = RawInstanceExtensions::new(instance_exts.iter().map(|&v| CString::new(v).unwrap()));
+    let instance = Instance::new(None, raw_instance_exts, None).unwrap();
+    let surface_handle = window.vulkan_create_surface(instance.internal_object())?;
+    let _surface = unsafe { Surface::from_raw_surface(instance, surface_handle, window.context()) };
+
+    let mut canvas = window.into_canvas().build().map_err(|e| e.to_string())?;
+    let texture_creator = canvas.texture_creator();
+
+    let mut texture = texture_creator.create_texture_streaming(PixelFormatEnum::RGB24, 256, 256).map_err(|e| e.to_string())?;
+    texture.with_lock(None, |buffer: &mut [u8], pitch: usize| {
+        for y in 0..256 {
+            for x in 0..256 {
+                let offset = y * pitch + x * 3;
+                buffer[offset] = x as u8;
+                buffer[offset + 1] = y as u8;
+                buffer[offset + 2] = 0;
+            }
+        }
+    })?;
+
+    canvas.clear();
+    canvas.copy(&texture, None, Some(Rect::new(100, 100, 256, 256)))?;
+    canvas.copy_ex(&texture, None, Some(Rect::new(450, 100, 256, 256)), 30.0, None, false, false)?;
+    canvas.present();
+
+    let mut event_pump = sdl_context.event_pump()?;
+
+    'running: loop {
+        for event in event_pump.poll_iter() {
+            match event {
+                Event::Quit { .. } | Event::KeyDown { keycode: Some(Keycode::Escape), .. } => break 'running,
+                _ => {}
+            }
+        }
+
+        println!("LULW");
+    }
+
+    Ok(())
 }
