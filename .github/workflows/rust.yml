@@ -1,0 +1,91 @@
+name: Rust Build and Test
+#TODO Switch to alt rust tooling
+#TODO Add formatting check for pull requests
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - name: Rust Version
+        run: rustc --version
+      - name: Build
+        run: cargo build --verbose --workspace
+      - name: Run tests
+        run: cargo test --verbose --workspace
+      - name: Build Release
+        run: cargo build --verbose --workspace --release
+      - name: Artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: artifacts-lin
+          path: |
+            target/release/snow-64
+
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - name: Rust Version
+        run: rustc --version
+      - name: Build
+        run: cargo build --verbose --workspace
+      - name: Run tests
+        run: cargo test --verbose --workspace
+      - name: Build Release
+        run: cargo build --verbose --workspace --release
+      - name: Artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: artifacts-mac
+          path: |
+            target/release/snow-64
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - name: Rust Version
+        run: rustc --version
+      - name: Build
+        run: cargo build --verbose --workspace
+      - name: Run tests
+        run: cargo test --verbose --workspace
+      - name: Build Release
+        run: cargo build --verbose --workspace --release
+      - name: Artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: artifacts-win
+          path: |
+            target/release/snow-64.exe
