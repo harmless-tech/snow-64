@@ -1,0 +1,21 @@
+[package]
+name = "snow-64"
+version = "0.0.1"
+authors = ["harmless-tech"]
+edition = "2018"
+description = "An fantasy console."
+documentation = "TODO URL"
+readme = "README.md"
+homepage = "TODO URL"
+repository = "https://github.com/harmless-tech/snow-64"
+# license = "MIT License - Copyright (c) 2021 Harmless_Tech"
+license-file = "LICENSE"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1

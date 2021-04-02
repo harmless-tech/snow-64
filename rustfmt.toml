@@ -1,0 +1,8 @@
+unstable_features = true
+#trailing_comma = "Never"
+#match_block_trailing_comma = true
+newline_style = "Native"
+reorder_imports = true
+control_brace_style = "ClosingNextLine"
+imports_granularity = "Crate"
+edition = "2018"
