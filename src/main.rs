@@ -1,243 +1,157 @@
-mod teapot;
+/*
+#[cfg(feature = "dx11")]
+extern crate gfx_backend_dx11 as back;
+#[cfg(feature = "gl")]
+extern crate gfx_backend_gl as back;
+*/
 
-#[macro_use]
-extern crate glium;
-extern crate image;
+/*#[cfg(feature = "vulkan")]
+extern crate gfx_backend_vulkan as back;
+#[cfg(feature = "metal")]
+extern crate gfx_backend_metal as back;
+#[cfg(feature = "dx12")]
+extern crate gfx_backend_dx12 as back;
+#[cfg(not(any(
+feature = "vulkan",
+feature = "dx11",
+feature = "dx12",
+feature = "metal",
+feature = "gl"
+)))]
+extern crate gfx_backend_empty as back;*/
 
-use glium::glutin::dpi::{Size, PhysicalSize};
+extern crate wgpu;
+extern crate winit;
+
 use std::borrow::Cow;
-use glium::texture::Texture2dDataSink;
+use winit::{
+    event::{Event, WindowEvent},
+    event_loop::{ControlFlow, EventLoop},
+    window::Window,
+};
 
-#[derive(Copy, Clone)]
-struct Vertex {
-    position: [f32; 2],
-    tex_coords: [f32; 2]
+async fn run(event_loop: EventLoop<()>, window: Window) {
+    let size = window.inner_size();
+    let instance = wgpu::Instance::new(wgpu::BackendBit::all());
+    let surface = unsafe { instance.create_surface(&window) };
+    let adapter = instance
+        .request_adapter(&wgpu::RequestAdapterOptions {
+            power_preference: wgpu::PowerPreference::HighPerformance,
+            compatible_surface: Some(&surface),
+        })
+        .await
+        .expect("Failed to find a suitable adapter.");
+
+    let (device, queue) = adapter
+        .request_device(
+            &wgpu::DeviceDescriptor {
+                label: None,
+                features: wgpu::Features::empty(),
+                limits: wgpu::Limits::default(),
+            },
+            None,
+        )
+        .await
+        .expect("Failed to create a device.");
+
+    let shader = device.create_shader_module(&wgpu::ShaderModuleDescriptor {
+        label: None,
+        source: wgpu::ShaderSource::Wgsl(Cow::Borrowed(include_str!("shaders/d-shader.wgsl"))),
+        flags: wgpu::ShaderFlags::all(),
+    });
+
+    let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+        label: None,
+        bind_group_layouts: &[],
+        push_constant_ranges: &[],
+    });
+
+    let swap_chain_format = adapter.get_swap_chain_preferred_format(&surface);
+
+    let render_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+        label: None,
+        layout: Some(&pipeline_layout),
+        vertex: wgpu::VertexState {
+            module: &shader,
+            entry_point: "vs_main",
+            buffers: &[],
+        },
+        fragment: Some(wgpu::FragmentState {
+            module: &shader,
+            entry_point: "fs_main",
+            targets: &[swap_chain_format.into()],
+        }),
+        primitive: wgpu::PrimitiveState::default(),
+        depth_stencil: None,
+        multisample: wgpu::MultisampleState::default(),
+    });
+
+    let mut sc_desc = wgpu::SwapChainDescriptor {
+        usage: wgpu::TextureUsage::RENDER_ATTACHMENT,
+        format: swap_chain_format,
+        width: size.width,
+        height: size.height,
+        present_mode: wgpu::PresentMode::Mailbox,
+    };
+
+    let mut swap_chain = device.create_swap_chain(&surface, &sc_desc);
+
+    event_loop.run(move |event, _, control_flow| {
+        let _ = (&instance, &adapter, &shader, &pipeline_layout);
+
+        *control_flow = ControlFlow::Wait;
+        match event {
+            Event::WindowEvent {
+                event: WindowEvent::Resized(size),
+                ..
+            } => {
+                sc_desc.width = size.width;
+                sc_desc.height = size.height;
+                swap_chain = device.create_swap_chain(&surface, &sc_desc);
+            }
+            Event::RedrawRequested(_) => {
+                let frame = swap_chain
+                    .get_current_frame()
+                    .expect("Failed to acquire next swap chain texture.")
+                    .output;
+                let mut encoder =
+                    device.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
+
+                {
+                    let mut rpass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                        label: None,
+                        color_attachments: &[wgpu::RenderPassColorAttachmentDescriptor {
+                            attachment: &frame.view,
+                            resolve_target: None,
+                            ops: wgpu::Operations {
+                                load: wgpu::LoadOp::Clear(wgpu::Color::GREEN),
+                                store: true,
+                            },
+                        }],
+                        depth_stencil_attachment: None,
+                    });
+
+                    rpass.set_pipeline(&render_pipeline);
+                    rpass.draw(0..3, 0..1);
+                }
+
+                queue.submit(Some(encoder.finish()));
+            }
+            Event::WindowEvent {
+                event: WindowEvent::CloseRequested,
+                ..
+            } => *control_flow = ControlFlow::Exit,
+            _ => {}
+        }
+    });
 }
-implement_vertex!(Vertex, position, tex_coords);
 
 fn main() {
     println!("Hello, world!");
 
-    use glium::{glutin, Surface};
+    let event_loop = EventLoop::new();
+    let window = winit::window::Window::new(&event_loop).unwrap();
 
-    let mut event_loop = glutin::event_loop::EventLoop::new();
-    let wb = glutin::window::WindowBuilder::new().with_title("snow-64").with_resizable(false).with_inner_size(Size::Physical(PhysicalSize { width: 512, height: 512 }));
-    let cb = glutin::ContextBuilder::new().with_depth_buffer(24);
-    let display = glium::Display::new(wb, cb, &event_loop).unwrap();
-
-    //
-    /*use std::io::Cursor;
-    let image = image::load(Cursor::new(&include_bytes!("../button.png")[..]), image::ImageFormat::Png).unwrap().to_rgba8();
-    let image_dims = image.dimensions();
-    let image = glium::texture::RawImage2d::from_raw_rgba_reversed(&image.into_raw(), image_dims);
-
-    let texture = glium::texture::Texture2d::new(&display, image).unwrap();*/
-    //
-
-    //
-    /*let vertex1 = Vertex { position: [-0.5, -0.5], tex_coords: [0.0, 0.0] };
-    let vertex2 = Vertex { position: [ 0.0,  0.5], tex_coords: [0.0, 1.0] };
-    let vertex3 = Vertex { position: [ 0.5, -0.25], tex_coords: [1.0, 0.0] };
-    let shape = vec![vertex1, vertex2, vertex3];*/
-
-    /*let vertex_buffer = glium::VertexBuffer::new(&display, &shape).unwrap();
-    let indices = glium::index::NoIndices(glium::index::PrimitiveType::TrianglesList);*/
-
-    /*let vertex_shader_src = r#"
-        #version 140
-
-        in vec2 position;
-        in vec2 tex_coords;
-        out vec2 v_tex_coords;
-
-        uniform mat4 matrix;
-
-        void main() {
-            v_tex_coords = tex_coords;
-            gl_Position = matrix * vec4(position, 0.0, 1.0);
-        }
-    "#;
-    let frag_shader_src = r#"
-        #version 140
-
-        in vec2 v_tex_coords;
-        out vec4 color;
-
-        uniform sampler2D tex;
-
-        void main() {
-            color = texture(tex, v_tex_coords);
-        }
-    "#;
-    let program = glium::Program::from_source(&display, vertex_shader_src, frag_shader_src, None).unwrap();*/
-    //
-
-    //
-    /*let positions = glium::VertexBuffer::new(&display, &teapot::VERTICES).unwrap();
-    let normals = glium::VertexBuffer::new(&display, &teapot::NORMALS).unwrap();
-    let indices = glium::IndexBuffer::new(&display, glium::index::PrimitiveType::TrianglesList, &teapot::INDICES).unwrap();
-
-    let vertex_shader_src = r#"
-        #version 150
-
-        in vec3 position;
-        in vec3 normal;
-
-        out vec3 v_normal;
-
-        uniform mat4 perp;
-        uniform mat4 matrix;
-
-        void main() {
-            v_normal = transpose(inverse(mat3(matrix))) * normal;
-            gl_Position = perp * matrix * vec4(position, 1.0);
-        }
-    "#;
-    let frag_shader_src = r#"
-        #version 140
-
-        in vec3 v_normal;
-        out vec4 color;
-        uniform vec3 u_light;
-
-        void main() {
-            float brightness = dot(normalize(v_normal), normalize(u_light));
-            vec3 dark_color = vec3(0.6, 0.0, 0.0);
-            vec3 reg_color = vec3(1.0, 0.0, 0.0);
-            color = vec4(mix(dark_color, reg_color, brightness), 1.0);
-        }
-    "#;
-    let program = glium::Program::from_source(&display, vertex_shader_src, frag_shader_src, None).unwrap();*/
-    //
-
-    //
-    let image = glium::texture::RawImage2d::from_raw(Cow::from(vec![(1_u8, 1_u8, 1_u8, 1_u8)]), 1, 1);
-    let texture = glium::texture::Texture2d::new(&display, image).unwrap();
-
-    /*let vertex1 = Vertex { position: [-1.0,  1.0] };
-    let vertex2 = Vertex { position: [-1.0, -1.0] };
-    let vertex3 = Vertex { position: [ 1.0, -1.0] };
-    let vertex4 = Vertex { position: [ 1.0,  1.0] };
-    let shape = vec![vertex1, vertex2, vertex3, vertex4];*/
-
-    let vertex1 = Vertex { position: [-0.5, -0.5], tex_coords: [0.0, 0.0] };
-    let vertex2 = Vertex { position: [ 0.0,  0.5], tex_coords: [0.0, 1.0] };
-    let vertex3 = Vertex { position: [ 0.5, -0.25], tex_coords: [1.0, 0.0] };
-    let shape = vec![vertex1, vertex2, vertex3];
-
-    let vertex_buffer = glium::VertexBuffer::new(&display, &shape).unwrap();
-    let indices = glium::index::NoIndices(glium::index::PrimitiveType::TrianglesList);
-
-    let vertex_shader_src = r#"
-        #version 150
-
-        in vec2 position;
-        in vec2 tex_coords;
-        out vec2 v_tex_coords;
-
-        uniform mat4 matrix;
-
-        void main() {
-            v_tex_coords = tex_coords;
-            gl_Position = matrix * vec4(position, 0.0, 1.0);
-        }
-    "#;
-    let frag_shader_src = r#"
-        #version 140
-
-        in vec2 v_tex_coords;
-        out vec4 color;
-
-        uniform sampler2D tex;
-
-        void main() {
-            color = texture(tex, v_tex_coords);
-        }
-    "#;
-    let program = glium::Program::from_source(&display, vertex_shader_src, frag_shader_src, None).unwrap();
-    //
-
-    /*let params = glium::DrawParameters {
-        depth: glium::Depth {
-            test: glium::draw_parameters::DepthTest::IfLess,
-            write: true,
-            .. Default::default()
-        },
-        .. Default::default()
-    };*/
-    let params = glium::DrawParameters {
-        depth: glium::Depth {
-            test: glium::DepthTest::IfLess,
-            write: true,
-            .. Default::default()
-        },
-        backface_culling: glium::draw_parameters::BackfaceCullingMode::CullClockwise,
-        .. Default::default()
-    };
-
-    /*let matrix = [
-        [0.01, 0.0, 0.0, 0.0],
-        [0.0, 0.01, 0.0, 0.0],
-        [0.0, 0.0, 0.01, 0.0],
-        [0.0, 0.0, 2.0, 1.0f32]
-    ];
-    let light = [-1.0, 0.4, 0.9f32];*/
-
-    event_loop.run(move |ev, _, control_flow| {
-        match ev {
-            glutin::event::Event::WindowEvent { event, .. } => match event {
-                glutin::event::WindowEvent::CloseRequested => {
-                    *control_flow = glutin::event_loop::ControlFlow::Exit;
-                    return;
-                },
-                _ => return
-            },
-            glutin::event::Event::NewEvents(cause) => match cause {
-                glutin::event::StartCause::ResumeTimeReached { .. } => (),
-                glutin::event::StartCause::Init => (),
-                _ => return,
-            },
-            _ => return
-        }
-
-        let next_frame_time = std::time::Instant::now() + std::time::Duration::from_nanos(16_666_667);
-        *control_flow = glutin::event_loop::ControlFlow::WaitUntil(next_frame_time);
-
-        let mut target = display.draw();
-
-        /*let perp = {
-            let (width, height) = target.get_dimensions();
-            let aspect_ratio = height as f32 / width as f32;
-
-            let fov: f32 = 3.141592 / 3.0;
-            let zfar = 1024.0;
-            let znear = 0.1;
-
-            let f = 1.0 / (fov / 2.0).tan();
-
-            [
-                [f * aspect_ratio, 0.0, 0.0, 0.0],
-                [0.0, f, 0.0, 0.0],
-                [0.0, 0.0, (zfar + znear) / (zfar - znear), 1.0],
-                [0.0, 0.0, -(2.0 * zfar * znear) / (zfar - znear), 0.0],
-            ]
-        };*/
-
-        let uniforms = uniform! {
-            matrix: [
-                [1.0, 0.0, 0.0, 0.0],
-                [0.0, 1.0, 0.0, 0.0],
-                [0.0, 0.0, 1.0, 0.0],
-                [0.0, 0.0, 0.0, 1.0f32],
-            ],
-            tex: &texture
-        };
-
-        // target.clear_color(0.0, 1.0, 1.0, 1.0);
-        target.clear_color_and_depth((0.0, 1.0, 1.0, 1.0), 1.0);
-        target.draw(&vertex_buffer, &indices, &program, &uniforms, &Default::default()).unwrap();
-        // target.draw(&vertex_buffer, &indices, &program, &uniforms, &Default::default()).unwrap();
-        // target.draw((&positions, &normals), &indices, &program, &uniform! { matrix: matrix, perp: perp, u_light: light }, &params).unwrap();
-        target.finish().unwrap();
-    });
+    env_logger::init();
+    pollster::block_on(run(event_loop, window));
 }
