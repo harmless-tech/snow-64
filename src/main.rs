@@ -7,25 +7,20 @@ mod update;
 
 extern crate sdl2;
 
-use image::EncodableLayout;
 use log::{debug, error, info, trace, warn};
 use sdl2::{
     event::Event,
     keyboard::Keycode,
     pixels::PixelFormatEnum,
-    rect::Rect,
     surface::Surface,
     video::{Window, WindowContext, WindowPos},
 };
 use std::{
-    borrow::{Borrow, BorrowMut, Cow},
-    cell::RefCell,
+    borrow::{Borrow, BorrowMut},
     ffi::CString,
     io::Cursor,
-    ops::{Deref, DerefMut},
     rc::Rc,
 };
-use sdl2::render::BlendMode;
 
 fn init() -> Result<(), String> {
     Ok(())
