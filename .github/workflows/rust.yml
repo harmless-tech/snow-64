@@ -25,6 +25,10 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       - name: Rust Version
         run: rustc --version
+      - name: Vcpkg
+        run: |
+          cargo install cargo-vcpkg
+          cargo vcpkg build
       - name: Build
         run: cargo build --verbose --workspace
       - name: Run tests
@@ -51,6 +55,10 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       - name: Rust Version
         run: rustc --version
+      - name: Vcpkg
+        run: |
+          cargo install cargo-vcpkg
+          cargo vcpkg build
       - name: Build
         run: cargo build --verbose --workspace
       - name: Run tests
@@ -77,6 +85,10 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       - name: Rust Version
         run: rustc --version
+      - name: Vcpkg
+        run: |
+          cargo install cargo-vcpkg
+          cargo vcpkg build
       - name: Build
         run: cargo build --verbose --workspace
       - name: Run tests
