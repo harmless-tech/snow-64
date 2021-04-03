@@ -20,6 +20,7 @@ log4rs = "1.0.0"
 rhai = "0.19.15"
 vulkano = "0.22.0"
 game-loop = "0.7.3"
+lazy_static = "1.4.0"
 
 [dependencies.sdl2]
 version = "0.34.4"

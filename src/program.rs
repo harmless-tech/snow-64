@@ -1,3 +1,3 @@
 pub struct Program<'a> {
-    start_fn: &'a dyn Fn() -> ()
+    start_fn: &'a dyn Fn() -> (),
 }

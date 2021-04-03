@@ -1,12 +1,13 @@
+mod logging;
+mod program;
+mod programs;
 mod render;
 mod scripting;
 mod update;
-mod programs;
-mod program;
-mod logging;
 
 extern crate sdl2;
 
+use image::EncodableLayout;
 use log::{debug, error, info, trace, warn};
 use sdl2::{
     event::Event,
@@ -14,16 +15,13 @@ use sdl2::{
     pixels::PixelFormatEnum,
     rect::Rect,
     surface::Surface,
-    video::{Window, WindowContext},
+    video::{Window, WindowContext, WindowPos},
 };
-use std::{ffi::CString, io::Cursor, rc::Rc};
-use rhai::{Engine, Scope, OptimizationLevel};
+use std::{borrow::Borrow, ffi::CString, io::Cursor, rc::Rc};
 
-//
-fn display(s: &str) {
-    info!("[RHAI]: {}", s);
+fn init() -> Result<(), String> {
+    Ok(())
 }
-//
 
 fn main() -> Result<(), String> {
     let _logging = logging::setup_log();
@@ -45,7 +43,7 @@ fn main() -> Result<(), String> {
     sdl2::hint::set("SDL_RENDER_SCALE_QUALITY", "nearest");
 
     setup_window_icon(&mut window)?;
-    let window = window;
+    //let window = window;
 
     info!("Vulkan Init.");
     let _surface = setup_vulkan(&window)?;
@@ -56,35 +54,52 @@ fn main() -> Result<(), String> {
     info!("Using SDL_Renderer \"{}\"", canvas.info().name);
     info!("Start!");
 
-    let mut texture = texture_creator
-        .create_texture_streaming(PixelFormatEnum::RGB24, 256, 256)
-        .map_err(|e| e.to_string())?;
-    texture.with_lock(None, |buffer: &mut [u8], pitch: usize| {
-        for y in 0..256 {
-            for x in 0..256 {
-                let offset = y * pitch + x * 3;
-                buffer[offset] = x as u8;
-                buffer[offset + 1] = y as u8;
-                buffer[offset + 2] = 0;
-            }
-        }
-    })?;
+    // let mut texture = texture_creator
+    //     .create_texture_streaming(PixelFormatEnum::RGBA32, 512, 512)
+    //     .map_err(|e| e.to_string())?;
+    // texture.with_lock(None, |buffer: &mut [u8], pitch: usize| {
+    //     debug!("Pitch: {}", pitch);
+    //
+    //     for y in 0..512 {
+    //         for x in 0..512 {
+    //             let offset = y * pitch + x * 4;
+    //             buffer[offset] = x as u8;
+    //             buffer[offset + 1] = y as u8;
+    //             buffer[offset + 2] = 255 as u8;
+    //             buffer[offset + 3] = 1 as u8;
+    //         }
+    //     }
+    // })?;
+    //
+    // let mut img = image::load(
+    //     Cursor::new(&include_bytes!("./assets/icon.png")[..]),
+    //     image::ImageFormat::Png,
+    // )
+    // .unwrap()
+    // .to_rgba8();
+    //
+    // // Pitch is width * num of bytes.
+    // texture
+    //     .update(Rect::new(0, 0, 512, 512), img.as_bytes(), 2048)
+    //     .map_err(|e| e.to_string())?;
 
     //
-    let mut engine = Engine::new();
-    let mut scope = Scope::new();
-
-    engine.register_fn("display", display);
-
-    let ast = engine.compile_file_with_scope(&scope, "./test/tes-game/entry.rhai".into()).unwrap();
-    let new_ast = engine.optimize_ast(&scope, ast.clone(), OptimizationLevel::Full);
-
-    engine.eval_ast::<()>(&new_ast);
+    // let mut engine = Engine::new();
+    // let mut scope = Scope::new();
+    //
+    // engine.register_fn("display", display);
+    //
+    // let ast = engine.compile_file_with_scope(&scope, "./test/tes-game/entry.rhai".into()).unwrap();
+    // let new_ast = engine.optimize_ast(&scope, ast, OptimizationLevel::Full);
+    //
+    // engine.eval_ast::<()>(&new_ast);
     //
 
+    canvas.clear();
+    // canvas.copy(&texture, None, Some(Rect::new(0, 0, 512, 512)));
     canvas.present();
 
-    /*let mut event_pump = sdl_context.event_pump()?;
+    let mut event_pump = sdl_context.event_pump()?;
 
     'running: loop {
         for event in event_pump.poll_iter() {
@@ -94,10 +109,46 @@ fn main() -> Result<(), String> {
                     keycode: Some(Keycode::Escape),
                     ..
                 } => break 'running,
+                Event::KeyDown {
+                    keycode: Some(Keycode::Up),
+                    ..
+                } => {
+                    let (width, height) = canvas.window().size();
+                    canvas
+                        .window_mut()
+                        .set_size(width + 8, height + 8)
+                        .map_err(|e| e.to_string())?;
+                    canvas
+                        .window_mut()
+                        .set_position(WindowPos::Centered, WindowPos::Centered);
+
+                    canvas.clear();
+                    let (width, height) = canvas.window().size();
+                    // canvas.copy(&texture, None, Some(Rect::new(0, 0, width, height)));
+                    canvas.present();
+                }
+                Event::KeyDown {
+                    keycode: Some(Keycode::Down),
+                    ..
+                } => {
+                    let (width, height) = canvas.window().size();
+                    canvas
+                        .window_mut()
+                        .set_size(width - 8, height - 8)
+                        .map_err(|e| e.to_string())?;
+                    canvas
+                        .window_mut()
+                        .set_position(WindowPos::Centered, WindowPos::Centered);
+
+                    canvas.clear();
+                    let (width, height) = canvas.window().size();
+                    // canvas.copy(&texture, None, Some(Rect::new(0, 0, width, height)));
+                    canvas.present();
+                }
                 _ => {}
             }
         }
-    }*/
+    }
 
     Ok(())
 }
