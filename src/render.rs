@@ -1,10 +1,20 @@
 use lazy_static::lazy_static;
-use sdl2::{rect::Rect, render::Texture};
-use std::{borrow::Borrow, sync::Mutex};
+use sdl2::{
+    pixels::PixelFormatEnum,
+    rect::Rect,
+    render::{Texture, TextureCreator, WindowCanvas},
+    surface::SurfaceContext,
+    video::WindowContext,
+};
+use std::{
+    borrow::{Borrow, BorrowMut},
+    io::Cursor,
+    sync::Mutex,
+};
+use sdl2::render::BlendMode;
 
 lazy_static! {
     static ref SETTINGS: Mutex<RenderSettings> = Mutex::new(RenderSettings {
-        curr_layer_1_mode: LayerMode::Tile,
         curr_tile_map: TileMap::Map0,
         curr_tile: 0,
         allow_pixel_editing: false,
@@ -37,13 +47,14 @@ const BUFFER_PITCH: usize = BUFFER_WIDTH as usize * 4;
 const BUFFER_SIZE: usize = BUFFER_PITCH * BUFFER_HEIGHT as usize;
 const BUFFER_RECT: (i32, i32, u32, u32) = (0, 0, BUFFER_WIDTH, BUFFER_HEIGHT);
 
-//TODO Maybe just use a vector of vectors.
-struct Buffers {
-    layer_0: Vec<u8>, // Background Layer.
+struct Buffers/*(Vec<Layers>);*/
+{
+    layer_0: Vec<u8>, // Tile Layer.
     layer_1: Vec<u8>, // Tile/Entity Layer.
-    layer_2: Vec<u8>, // Entity Layer.
-    layer_3: Vec<u8>, // Text Layer.
-    layer_4: Vec<u8>, // Pixel Layer.
+    layer_2: Vec<u8>, // Tile/Entity Layer.
+    layer_3: Vec<u8>, // Entity Layer.
+    layer_4: Vec<u8>, // Text Layer.
+    layer_5: Vec<u8>, // Pixel Layer.
 }
 
 const TILE_WIDTH: u32 = 16;
@@ -60,9 +71,12 @@ struct TileMaps {
     map_3: Vec<u8>,
 }
 
-enum LayerMode {
-    Tile,
-    Entity,
+enum Layers {
+    Layer0(Vec<u8>),
+    Layer1(Vec<u8>),
+    Layer2(Vec<u8>),
+    Layer3(Vec<u8>),
+    Layer4(Vec<u8>),
 }
 
 enum TileMap {
@@ -72,8 +86,38 @@ enum TileMap {
     Map3,
 }
 
-pub fn render(textures: &mut Vec<Texture>) -> Result<(), String> {
-    if textures.len() == 5 {
+const AMOUNT_TEXTURES: usize = 5;
+
+pub fn init_textures(tex_creator: &TextureCreator<WindowContext>) -> Result<Vec<Texture>, String> {
+    let mut textures = Vec::<Texture>::new();
+    for _i in 0..AMOUNT_TEXTURES {
+        let mut tex = tex_creator
+            .create_texture_streaming(PixelFormatEnum::RGBA32, BUFFER_WIDTH, BUFFER_HEIGHT)
+            .map_err(|e| e.to_string())?;
+        tex.set_blend_mode(BlendMode::Blend);
+        textures.push(tex);
+    }
+
+    Ok(textures)
+}
+
+//TODO Allow tiles to be mapped to the buffer.
+pub fn draw(canvas: &mut WindowCanvas, textures: &mut Vec<Texture>) -> Result<(), String> {
+    canvas.clear();
+
+    build_textures(textures.borrow_mut())?;
+    let (width, height) = canvas.window().size();
+    for tex in textures.iter() {
+        canvas.copy(&tex, None, Some(Rect::new(0, 0, width, height)))?;
+    }
+
+    canvas.present();
+
+    Ok(())
+}
+
+fn build_textures(textures: &mut Vec<Texture>) -> Result<(), String> {
+    if textures.len() == AMOUNT_TEXTURES {
         textures
             .get_mut(0)
             .unwrap()

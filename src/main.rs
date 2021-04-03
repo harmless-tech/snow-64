@@ -17,7 +17,15 @@ use sdl2::{
     surface::Surface,
     video::{Window, WindowContext, WindowPos},
 };
-use std::{borrow::Borrow, ffi::CString, io::Cursor, rc::Rc};
+use std::{
+    borrow::{Borrow, BorrowMut, Cow},
+    cell::RefCell,
+    ffi::CString,
+    io::Cursor,
+    ops::{Deref, DerefMut},
+    rc::Rc,
+};
+use sdl2::render::BlendMode;
 
 fn init() -> Result<(), String> {
     Ok(())
@@ -49,7 +57,7 @@ fn main() -> Result<(), String> {
     let _surface = setup_vulkan(&window)?;
 
     let mut canvas = window.into_canvas().build().map_err(|e| e.to_string())?;
-    let texture_creator = canvas.texture_creator();
+    // let texture_creator = canvas.texture_creator();
 
     info!("Using SDL_Renderer \"{}\"", canvas.info().name);
     info!("Start!");
@@ -95,9 +103,26 @@ fn main() -> Result<(), String> {
     // engine.eval_ast::<()>(&new_ast);
     //
 
-    canvas.clear();
-    // canvas.copy(&texture, None, Some(Rect::new(0, 0, 512, 512)));
-    canvas.present();
+    let texture_creator = canvas.texture_creator();
+    let mut textures = render::init_textures(&texture_creator)?;
+
+    // let mut tex = texture_creator
+    //     .create_texture_streaming(PixelFormatEnum::RGBA32, 512, 512)
+    //     .map_err(|e| e.to_string())?;
+    // let img = image::load(
+    //     Cursor::new(&include_bytes!("./assets/icon.png")[..]),
+    //     image::ImageFormat::Png,
+    // )
+    // .unwrap()
+    // .to_rgba8();
+    // tex.update(
+    //     Rect::from((0, 0, 512, 512)),
+    //     &img,
+    //     2048
+    // )
+    // .map_err(|e| e.to_string())?;
+
+    render::draw(&mut canvas, textures.borrow_mut())?;
 
     let mut event_pump = sdl_context.event_pump()?;
 
@@ -122,16 +147,13 @@ fn main() -> Result<(), String> {
                         .window_mut()
                         .set_position(WindowPos::Centered, WindowPos::Centered);
 
-                    canvas.clear();
-                    let (width, height) = canvas.window().size();
-                    // canvas.copy(&texture, None, Some(Rect::new(0, 0, width, height)));
-                    canvas.present();
+                    render::draw(&mut canvas, textures.borrow_mut())?;
                 }
                 Event::KeyDown {
                     keycode: Some(Keycode::Down),
                     ..
                 } => {
-                    let (width, height) = canvas.window().size();
+                    let (width, height) = canvas.borrow().window().size();
                     canvas
                         .window_mut()
                         .set_size(width - 8, height - 8)
@@ -140,10 +162,7 @@ fn main() -> Result<(), String> {
                         .window_mut()
                         .set_position(WindowPos::Centered, WindowPos::Centered);
 
-                    canvas.clear();
-                    let (width, height) = canvas.window().size();
-                    // canvas.copy(&texture, None, Some(Rect::new(0, 0, width, height)));
-                    canvas.present();
+                    render::draw(&mut canvas, textures.borrow_mut())?;
                 }
                 _ => {}
             }
