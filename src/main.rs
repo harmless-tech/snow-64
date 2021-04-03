@@ -44,80 +44,29 @@ fn main() -> Result<(), String> {
         .map_err(|e| e.to_string())?;
 
     sdl2::hint::set("SDL_RENDER_SCALE_QUALITY", "nearest");
-
     setup_window_icon(&mut window)?;
-    //let window = window;
+
+    let window = window;
 
     info!("Vulkan Init.");
     let _surface = setup_vulkan(&window)?;
 
+    info!("Renderer Init.");
     let mut canvas = window.into_canvas().build().map_err(|e| e.to_string())?;
-    // let texture_creator = canvas.texture_creator();
-
-    info!("Using SDL_Renderer \"{}\"", canvas.info().name);
-    info!("Start!");
-
-    // let mut texture = texture_creator
-    //     .create_texture_streaming(PixelFormatEnum::RGBA32, 512, 512)
-    //     .map_err(|e| e.to_string())?;
-    // texture.with_lock(None, |buffer: &mut [u8], pitch: usize| {
-    //     debug!("Pitch: {}", pitch);
-    //
-    //     for y in 0..512 {
-    //         for x in 0..512 {
-    //             let offset = y * pitch + x * 4;
-    //             buffer[offset] = x as u8;
-    //             buffer[offset + 1] = y as u8;
-    //             buffer[offset + 2] = 255 as u8;
-    //             buffer[offset + 3] = 1 as u8;
-    //         }
-    //     }
-    // })?;
-    //
-    // let mut img = image::load(
-    //     Cursor::new(&include_bytes!("./assets/icon.png")[..]),
-    //     image::ImageFormat::Png,
-    // )
-    // .unwrap()
-    // .to_rgba8();
-    //
-    // // Pitch is width * num of bytes.
-    // texture
-    //     .update(Rect::new(0, 0, 512, 512), img.as_bytes(), 2048)
-    //     .map_err(|e| e.to_string())?;
-
-    //
-    // let mut engine = Engine::new();
-    // let mut scope = Scope::new();
-    //
-    // engine.register_fn("display", display);
-    //
-    // let ast = engine.compile_file_with_scope(&scope, "./test/tes-game/entry.rhai".into()).unwrap();
-    // let new_ast = engine.optimize_ast(&scope, ast, OptimizationLevel::Full);
-    //
-    // engine.eval_ast::<()>(&new_ast);
-    //
-
     let texture_creator = canvas.texture_creator();
     let mut textures = render::init_textures(&texture_creator)?;
 
-    // let mut tex = texture_creator
-    //     .create_texture_streaming(PixelFormatEnum::RGBA32, 512, 512)
-    //     .map_err(|e| e.to_string())?;
-    // let img = image::load(
-    //     Cursor::new(&include_bytes!("./assets/icon.png")[..]),
-    //     image::ImageFormat::Png,
-    // )
-    // .unwrap()
-    // .to_rgba8();
-    // tex.update(
-    //     Rect::from((0, 0, 512, 512)),
-    //     &img,
-    //     2048
-    // )
-    // .map_err(|e| e.to_string())?;
+    info!("Using SDL_Renderer \"{}.\"", canvas.info().name);
+    info!("Start!");
 
-    render::draw(&mut canvas, textures.borrow_mut())?;
+    //TODO Remove!
+    let mut v = vec![0_u8; 128];
+    debug!("{:?}", v);
+    v.splice(0..10, [1_u8; 10].iter().cloned());
+    debug!("{:?}", v);
+    // /\
+
+    render::draw(&mut canvas, textures.borrow_mut())?; //TODO Remove! (First and only draw)
 
     let mut event_pump = sdl_context.event_pump()?;
 
