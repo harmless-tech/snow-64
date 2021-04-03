@@ -1,4 +1,9 @@
-mod logic;
+mod render;
+mod scripting;
+mod update;
+mod programs;
+mod program;
+mod logging;
 
 extern crate sdl2;
 
@@ -12,8 +17,18 @@ use sdl2::{
     video::{Window, WindowContext},
 };
 use std::{ffi::CString, io::Cursor, rc::Rc};
+use rhai::{Engine, Scope, OptimizationLevel};
+
+//
+fn display(s: &str) {
+    info!("[RHAI]: {}", s);
+}
+//
 
 fn main() -> Result<(), String> {
+    let _logging = logging::setup_log();
+    info!("Logging Check!");
+
     info!("SDL2 Init.");
     let sdl_context = sdl2::init()?;
     let video_subsystem = sdl_context.video()?;
@@ -26,6 +41,8 @@ fn main() -> Result<(), String> {
         .allow_highdpi()
         .build()
         .map_err(|e| e.to_string())?;
+
+    sdl2::hint::set("SDL_RENDER_SCALE_QUALITY", "nearest");
 
     setup_window_icon(&mut window)?;
     let window = window;
@@ -53,20 +70,21 @@ fn main() -> Result<(), String> {
         }
     })?;
 
-    canvas.clear();
-    canvas.copy(&texture, None, Some(Rect::new(100, 100, 256, 256)))?;
-    canvas.copy_ex(
-        &texture,
-        None,
-        Some(Rect::new(450, 100, 256, 256)),
-        30.0,
-        None,
-        false,
-        false,
-    )?;
+    //
+    let mut engine = Engine::new();
+    let mut scope = Scope::new();
+
+    engine.register_fn("display", display);
+
+    let ast = engine.compile_file_with_scope(&scope, "./test/tes-game/entry.rhai".into()).unwrap();
+    let new_ast = engine.optimize_ast(&scope, ast.clone(), OptimizationLevel::Full);
+
+    engine.eval_ast::<()>(&new_ast);
+    //
+
     canvas.present();
 
-    let mut event_pump = sdl_context.event_pump()?;
+    /*let mut event_pump = sdl_context.event_pump()?;
 
     'running: loop {
         for event in event_pump.poll_iter() {
@@ -79,7 +97,7 @@ fn main() -> Result<(), String> {
                 _ => {}
             }
         }
-    }
+    }*/
 
     Ok(())
 }
