@@ -5,31 +5,92 @@ mod update;
 
 extern crate sdl2;
 
+use game_loop::game_loop;
+use image::{EncodableLayout, RgbaImage};
+use log::{debug, error, info, trace, warn};
+use sdl2::{event::Event, keyboard::{Keycode, Mod}, pixels::PixelFormatEnum, render::BlendMode, surface::Surface, video::{Window, WindowContext, WindowPos}, Sdl};
 use std::{
     borrow::{Borrow, BorrowMut},
     ffi::CString,
     io::Cursor,
     rc::Rc,
 };
+use sdl2::render::{WindowCanvas, Texture};
+use std::cmp::max;
 
-use image::{EncodableLayout, RgbaImage};
-use log::{debug, error, info, trace, warn};
-use sdl2::{
-    event::Event,
-    keyboard::Keycode,
-    pixels::PixelFormatEnum,
-    render::BlendMode,
-    surface::Surface,
-    video::{Window, WindowContext, WindowPos},
-};
+#[cfg(debug_assertions)]
+const DEBUG: bool = true;
+#[cfg(not(debug_assertions))]
+const DEBUG: bool = false;
 
-fn init() -> Result<(), String> {
+struct Snow64();
+impl Snow64 {
+    fn new() -> Self {
+        Snow64()
+    }
+
+    fn fixed_update(&self) {
+        trace!("Fix");
+    }
+
+    fn update(&self) {
+        trace!("Fix");
+    }
+
+    fn render(&self) {
+        trace!("Fix");
+    }
+}
+
+fn init(sdl_context: &Sdl, canvas: &mut WindowCanvas, textures: &mut Vec<Texture>, debug: bool) -> Result<(), String> {
+    let mut snow64 = Snow64::new();
+
+    let mut event_pump = sdl_context.event_pump()?;
+    'running: loop {
+        for event in event_pump.poll_iter() {
+            match event {
+                Event::Quit { .. } => break 'running,
+                Event::KeyDown {
+                    keycode: Some(key),
+                    keymod: m,
+                    ..
+                } => {
+                    debug!("mod: {}", m);
+                    match (key, (m & Mod::LCTRLMOD) == Mod::LCTRLMOD) {
+                        (Keycode::Q, true) => break 'running,
+                        (_, _) => {}
+                    }
+                },
+                Event::TextInput {
+                    text: input,
+                    ..
+                } => {
+                    debug!("text: {}", input);
+                }
+                _ => {}
+            }
+        }
+    }
+
+    game_loop(snow64, 60, 0.1, |snow| {
+        snow.exit();
+    }, |snow| {
+    });
+
     Ok(())
 }
 
 fn main() -> Result<(), String> {
-    let _logging = logging::setup_log();
+    let mut args = std::env::args();
+    let debug = DEBUG || args.any(|s| s.eq("--debug"));
+
+    let _logging = logging::setup_log(debug);
     info!("Logging Check!");
+    info!("Logging Level Info: TRUE");
+    warn!("Logging Level Warn: TRUE");
+    error!("Logging Level Error: TRUE");
+    debug!("Logging Level Debug: TRUE");
+    trace!("Logging Level Trace: TRUE");
 
     info!("SDL2 Init.");
     let sdl_context = sdl2::init()?;
@@ -58,52 +119,15 @@ fn main() -> Result<(), String> {
     let texture_creator = canvas.texture_creator();
     let mut textures = render::init_textures(&texture_creator)?;
 
+    info!("Using SDL_Renderer \"{}.\"", canvas.info().name);
     info!("Boot!");
     render::load_image_into_layer(0, get_icon().as_bytes());
+    render::draw(&mut canvas, textures.borrow_mut())?;
 
-    info!("Using SDL_Renderer \"{}.\"", canvas.info().name);
     info!("Start!");
+    init(&sdl_context, &mut canvas, &mut textures, debug)?;
 
-    //TODO Remove!
-
-    // let mut v = vec![0_u8; 128];
-    // debug!("{:?}", v);
-    // v.splice(0..10, [1_u8; 10].iter().cloned());
-    // debug!("{:?}", v);
-
-    // debug!("Mix: {}", render::commands::create_color(15, 15, 15, 15));
-    // debug!("Mix: {}", render::commands::create_color(u32::MAX, u32::MAX, u32::MAX, u32::MAX));
-
-    // scripting::run_rhai_program("./test/tes-game/entry.rhai")?;
-
-    // render::commands::enable_pixel_layer();
-    /*for x in 0..256 {
-        for y in 0..256 {
-            render::commands::draw_pixel(
-                x as u32,
-                y as u32,
-                rand::thread_rng().gen_range(0..50625),
-            );
-        }
-    }*/
-
-    /*for x in 0..256 {
-        for y in 0..256 {
-            render::commands::draw_pixel(x as u32, y as u32, render::colors::BLACK);
-        }
-    }*/
-
-    // let mut vec = vec![0_u8; 256 * 256 * 4];
-    // for i in 0..(256 * 256) {
-    //     vec[i * 4 + 3] = 255_u8;
-    // }
-    // render::load_image_into_layer(3, vec.as_slice());
-
-    // /\
-
-    render::draw(&mut canvas, textures.borrow_mut())?; //TODO Remove! (First and only draw)
-
-    let mut event_pump = sdl_context.event_pump()?;
+    /*let mut event_pump = sdl_context.event_pump()?;
 
     'running: loop {
         for event in event_pump.poll_iter() {
@@ -146,7 +170,7 @@ fn main() -> Result<(), String> {
                 _ => {}
             }
         }
-    }
+    }*/
 
     Ok(())
 }

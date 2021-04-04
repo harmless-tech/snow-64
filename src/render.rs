@@ -118,26 +118,6 @@ pub fn init_textures(tex_creator: &TextureCreator<WindowContext>) -> Result<Vec<
 pub fn draw(canvas: &mut WindowCanvas, textures: &mut Vec<Texture>) -> Result<(), String> {
     canvas.clear();
 
-    /*let mut vec = vec![0_u8; LAYER_SIZE];
-    for i in 0..(LAYER_WIDTH as usize * LAYER_HEIGHT as usize) {
-        vec[i * 4 + 3] = 1_u8;
-    }
-    let mut surface = Surface::from_data(vec.as_mut_slice(), LAYER_WIDTH, LAYER_HEIGHT, LAYER_PITCH as u32, PixelFormatEnum::RGBA32)?;
-    surface.set_blend_mode(BlendMode::Blend)?;
-
-    let mut layers = LAYERS.lock().unwrap();
-    for layer in layers.layers.iter_mut() {
-        let mut sur = Surface::from_data(layer.as_mut_slice(), LAYER_WIDTH, LAYER_HEIGHT, LAYER_PITCH as u32, PixelFormatEnum::RGBA32)?;
-        sur.set_blend_mode(BlendMode::Blend)?;
-
-        surface.blit(Rect::from(LAYER_RECT), sur.as_mut(), Rect::from(LAYER_RECT));
-    }
-
-    let create = canvas.texture_creator();
-    let tex = create.create_texture_from_surface(surface).map_err(|e| e.to_string())?;
-    let (width, height) = canvas.window().size();
-    canvas.copy(&tex, None, Some(Rect::new(0, 0, width, height)))?;*/
-
     build_textures(textures.borrow_mut())?;
     let (width, height) = canvas.window().size();
     for tex in textures.iter() {
@@ -224,9 +204,6 @@ pub mod colors {
     }
 }
 
-pub mod letters {}
-
-//TODO Allow for TileMaps to be swapped out at program runtime?
 pub mod commands {
     use crate::render::*;
     use rhai::plugin::*;
