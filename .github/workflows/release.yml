@@ -1,18 +1,28 @@
-name: Rust Build and Test
-#TODO Switch to alt rust tooling
-#TODO Add formatting check for pull requests
+name: Rust Release Build and Test
 
 on:
   push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+    tags:
+      - "v**"
 
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
+  release:
+    runs-on: ubuntu-latest
+    # Should this be a draft?
+    steps:
+      - name: Create GitHub release
+        uses: Roang-zero1/github-create-release-action@master
+        with:
+          version_regex: ^v[[:digit:]][[:digit:]]*\.[[:digit:]][[:digit:]]*\.[[:digit:]][[:digit:]]*$
+          prerelease_regex: ^v[[:digit:]][[:digit:]]*\.[[:digit:]][[:digit:]]*\.[[:digit:]][[:digit:]]*/
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   build-linux:
+    needs: [ release ]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -32,17 +42,19 @@ jobs:
           cargo install cargo-vcpkg
           cargo vcpkg build
       - name: Build
-        run: cargo build --verbose --workspace
+        run: cargo build --verbose --workspace --release
       - name: Run tests
-        run: cargo test --verbose --workspace
-      - name: Artifact
-        uses: actions/upload-artifact@v2
+        run: cargo test --verbose --workspace --release
+      - name: Add artifacts to GitHub release
+        uses: Roang-zero1/github-upload-release-artifacts-action@master
         with:
-          name: artifacts-lin
-          path: |
-            target/debug/snow-64
+          args:
+            - target/release/snow-64
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   build-macos:
+    needs: [ release ]
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v2
@@ -62,17 +74,19 @@ jobs:
           cargo install cargo-vcpkg
           cargo vcpkg build
       - name: Build
-        run: cargo build --verbose --workspace
+        run: cargo build --verbose --workspace --release
       - name: Run tests
-        run: cargo test --verbose --workspace
-      - name: Artifact
-        uses: actions/upload-artifact@v2
+        run: cargo test --verbose --workspace --release
+      - name: Add artifacts to GitHub release
+        uses: Roang-zero1/github-upload-release-artifacts-action@master
         with:
-          name: artifacts-mac
-          path: |
-            target/debug/snow-64
+          args:
+            - target/release/snow-64
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   build-windows:
+    needs: [ release ]
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v2
@@ -92,12 +106,13 @@ jobs:
           cargo install cargo-vcpkg
           cargo vcpkg build
       - name: Build
-        run: cargo build --verbose --workspace
+        run: cargo build --verbose --workspace --release
       - name: Run tests
-        run: cargo test --verbose --workspace
-      - name: Artifact
-        uses: actions/upload-artifact@v2
+        run: cargo test --verbose --workspace --release
+      - name: Add artifacts to GitHub release
+        uses: Roang-zero1/github-upload-release-artifacts-action@master
         with:
-          name: artifacts-win
-          path: |
-            target/debug/snow-64.exe
+          args:
+            - target/release/snow-64.exe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
