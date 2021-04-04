@@ -1,3 +1,10 @@
+mod logging;
+mod programs;
+mod render;
+mod update;
+
+extern crate sdl2;
+
 use std::{
     borrow::{Borrow, BorrowMut},
     ffi::CString,
@@ -5,25 +12,16 @@ use std::{
     rc::Rc,
 };
 
-use crate::render::colors::BLACK;
 use image::{EncodableLayout, RgbaImage};
 use log::{debug, error, info, trace, warn};
 use sdl2::{
     event::Event,
     keyboard::Keycode,
     pixels::PixelFormatEnum,
+    render::BlendMode,
     surface::Surface,
     video::{Window, WindowContext, WindowPos},
 };
-use sdl2::render::BlendMode;
-use sdl2::gfx::primitives::DrawRenderer;
-
-mod logging;
-mod programs;
-mod render;
-mod update;
-
-extern crate sdl2;
 
 fn init() -> Result<(), String> {
     Ok(())
@@ -45,7 +43,7 @@ fn main() -> Result<(), String> {
         .allow_highdpi()
         .build()
         .map_err(|e| e.to_string())?;
-    
+
     sdl2::hint::set("SDL_RENDER_SCALE_QUALITY", "nearest");
     setup_window_icon(&mut window)?;
 
@@ -56,8 +54,7 @@ fn main() -> Result<(), String> {
 
     info!("Renderer Init.");
     let mut canvas = window.into_canvas().build().map_err(|e| e.to_string())?;
-    canvas.set_blend_mode(BlendMode::Add);
-    debug!("{:?}", canvas.default_pixel_format());
+    canvas.set_blend_mode(BlendMode::Blend);
     let texture_creator = canvas.texture_creator();
     let mut textures = render::init_textures(&texture_creator)?;
 
@@ -68,6 +65,7 @@ fn main() -> Result<(), String> {
     info!("Start!");
 
     //TODO Remove!
+
     // let mut v = vec![0_u8; 128];
     // debug!("{:?}", v);
     // v.splice(0..10, [1_u8; 10].iter().cloned());
@@ -78,7 +76,7 @@ fn main() -> Result<(), String> {
 
     // scripting::run_rhai_program("./test/tes-game/entry.rhai")?;
 
-    render::commands::enable_pixel_layer();
+    // render::commands::enable_pixel_layer();
     /*for x in 0..256 {
         for y in 0..256 {
             render::commands::draw_pixel(
@@ -95,19 +93,12 @@ fn main() -> Result<(), String> {
         }
     }*/
 
-    let mut vec = vec![0_u8; 256 * 256 * 4];
-    for i in 0..(256 * 256) {
-        vec[i * 4 + 3] = 1_u8;
-    }
-    render::load_image_into_layer(3, vec.as_slice());
+    // let mut vec = vec![0_u8; 256 * 256 * 4];
+    // for i in 0..(256 * 256) {
+    //     vec[i * 4 + 3] = 255_u8;
+    // }
+    // render::load_image_into_layer(3, vec.as_slice());
 
-    let mut img = image::load(
-        Cursor::new(&include_bytes!("./assets/font.png")[..]),
-        image::ImageFormat::Png,
-    )
-    .unwrap()
-    .to_rgba8();
-    render::load_image_into_layer(4, img.as_bytes());
     // /\
 
     render::draw(&mut canvas, textures.borrow_mut())?; //TODO Remove! (First and only draw)

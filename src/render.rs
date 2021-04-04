@@ -1,13 +1,13 @@
 use lazy_static::lazy_static;
 use log::{debug, error};
 use sdl2::{
-    pixels::PixelFormatEnum,
+    gfx::primitives::DrawRenderer,
+    pixels::{Color, PixelFormatEnum},
     rect::Rect,
     render::{BlendMode, Texture, TextureCreator, WindowCanvas},
     video::WindowContext,
 };
 use std::{borrow::BorrowMut, sync::Mutex};
-use crate::render::Layer::Pixel;
 
 lazy_static! {
     static ref LAYERS: Mutex<Layers> = Mutex::new(Layers {
@@ -31,6 +31,11 @@ lazy_static! {
         ],
         current_map: 0,
         current_tile: 0,
+    });
+    static ref FONT_MAP: Mutex<FontMap> = Mutex::new(FontMap {
+        font_map_light: vec![0_u8; FONT_SIZE],
+        font_map_dark: vec![0_u8; FONT_SIZE],
+        current_map_light: true,
     });
 }
 
@@ -79,7 +84,22 @@ struct TileMaps {
     current_tile: u32,
 }
 
-//TODO Font Map!
+const FONT_WIDTH: u32 = 128;
+const FONT_HEIGHT: u32 = 64;
+const FONT_PITCH: usize = FONT_WIDTH as usize * 4;
+const FONT_SIZE: usize = FONT_PITCH * FONT_HEIGHT as usize;
+
+const LETTER_WIDTH: u32 = 8;
+const LETTER_HEIGHT: u32 = 8;
+const LETTER_PITCH: usize = LETTER_WIDTH as usize * 4;
+const LETTER_SIZE: usize = LETTER_PITCH * LETTER_HEIGHT as usize;
+const AMOUNT_LETTERS: usize = 128;
+
+struct FontMap {
+    font_map_light: Vec<u8>,
+    font_map_dark: Vec<u8>,
+    current_map_light: bool,
+}
 
 pub fn init_textures(tex_creator: &TextureCreator<WindowContext>) -> Result<Vec<Texture>, String> {
     let mut textures = Vec::<Texture>::new();
@@ -87,7 +107,7 @@ pub fn init_textures(tex_creator: &TextureCreator<WindowContext>) -> Result<Vec<
         let mut tex = tex_creator
             .create_texture_streaming(PixelFormatEnum::RGBA32, LAYER_WIDTH, LAYER_HEIGHT)
             .map_err(|e| e.to_string())?;
-        tex.set_blend_mode(BlendMode::None);
+        tex.set_blend_mode(BlendMode::Blend);
         textures.push(tex);
     }
 
@@ -97,6 +117,26 @@ pub fn init_textures(tex_creator: &TextureCreator<WindowContext>) -> Result<Vec<
 //TODO Allow tiles to be mapped to the buffer.
 pub fn draw(canvas: &mut WindowCanvas, textures: &mut Vec<Texture>) -> Result<(), String> {
     canvas.clear();
+
+    /*let mut vec = vec![0_u8; LAYER_SIZE];
+    for i in 0..(LAYER_WIDTH as usize * LAYER_HEIGHT as usize) {
+        vec[i * 4 + 3] = 1_u8;
+    }
+    let mut surface = Surface::from_data(vec.as_mut_slice(), LAYER_WIDTH, LAYER_HEIGHT, LAYER_PITCH as u32, PixelFormatEnum::RGBA32)?;
+    surface.set_blend_mode(BlendMode::Blend)?;
+
+    let mut layers = LAYERS.lock().unwrap();
+    for layer in layers.layers.iter_mut() {
+        let mut sur = Surface::from_data(layer.as_mut_slice(), LAYER_WIDTH, LAYER_HEIGHT, LAYER_PITCH as u32, PixelFormatEnum::RGBA32)?;
+        sur.set_blend_mode(BlendMode::Blend)?;
+
+        surface.blit(Rect::from(LAYER_RECT), sur.as_mut(), Rect::from(LAYER_RECT));
+    }
+
+    let create = canvas.texture_creator();
+    let tex = create.create_texture_from_surface(surface).map_err(|e| e.to_string())?;
+    let (width, height) = canvas.window().size();
+    canvas.copy(&tex, None, Some(Rect::new(0, 0, width, height)))?;*/
 
     build_textures(textures.borrow_mut())?;
     let (width, height) = canvas.window().size();
@@ -113,14 +153,15 @@ pub fn draw(canvas: &mut WindowCanvas, textures: &mut Vec<Texture>) -> Result<()
 // Tiles should be handled in another part of the program.
 // pub fn load_tile_maps(maps: &[&[u8; TILE_MAP_SIZE]; AMOUNT_TILE_MAPS]) {}
 
+// All font maps are loaded before program start.
+// pub fn load_font_maps(light: &[u8; FONT_SIZE], dark: &[u8; FONT_SIZE]) {}
+
 // This function bypasses the pixel layer check!
 pub fn load_image_into_layer(layer: usize, img: &[u8]) {
     if layer < AMOUNT_LAYER {
         let mut layers = LAYERS.lock().unwrap();
         let buffer = layers.layers.get_mut(layer).unwrap();
         buffer.splice(0..LAYER_SIZE, img.iter().cloned());
-
-        debug!("Pls: {}", layer);
     }
     else {
         error!("load_image_into_layer received a layer value greater then the amount of layers!");
@@ -182,6 +223,8 @@ pub mod colors {
         vec![r, g, b, a]
     }
 }
+
+pub mod letters {}
 
 //TODO Allow for TileMaps to be swapped out at program runtime?
 pub mod commands {

@@ -1,0 +1,5 @@
+Both ascii-oldschool-black.png and ascii-oldschool-white.png were made by domsson on opengameart.org.
+Both are licensed under CC0. (https://creativecommons.org/share-your-work/public-domain/cc0/)
+https://opengameart.org/content/ascii-bitmap-font-oldschool
+
+The only modification that has been made was a shift of the characters to line them up better for snow-64's font handling.
