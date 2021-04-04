@@ -21,6 +21,7 @@ use std::{
     io::Cursor,
     rc::Rc,
 };
+use rand::Rng;
 
 fn init() -> Result<(), String> {
     Ok(())
@@ -60,11 +61,20 @@ fn main() -> Result<(), String> {
     info!("Start!");
 
     //TODO Remove!
-    let mut v = vec![0_u8; 128];
-    debug!("{:?}", v);
-    v.splice(0..10, [1_u8; 10].iter().cloned());
-    debug!("{:?}", v);
+    // let mut v = vec![0_u8; 128];
+    // debug!("{:?}", v);
+    // v.splice(0..10, [1_u8; 10].iter().cloned());
+    // debug!("{:?}", v);
+
+    render::commands::enable_pixel_layer();
+    for x in 0..512 {
+        for y in 0..512 {
+            render::commands::draw_pixel(x as u32, y as u32, rand::thread_rng().gen_range(0..50625) as u16);
+        }
+    }
     // /\
+
+    
 
     render::draw(&mut canvas, textures.borrow_mut())?; //TODO Remove! (First and only draw)
 

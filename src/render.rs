@@ -1,3 +1,4 @@
+use image::{EncodableLayout, ImageOutputFormat, ImageFormat, ColorType};
 use lazy_static::lazy_static;
 use sdl2::{
     pixels::PixelFormatEnum,
@@ -5,10 +6,10 @@ use sdl2::{
     render::{BlendMode, Texture, TextureCreator, WindowCanvas},
     video::WindowContext,
 };
-use std::{
-    borrow::{BorrowMut},
-    sync::{Mutex},
-};
+use std::{borrow::BorrowMut, sync::Mutex};
+use log::{error, debug};
+use image::io::Reader;
+use std::io::Cursor;
 
 lazy_static! {
     static ref LAYERS: Mutex<Layers> = Mutex::new(Layers {
@@ -108,9 +109,7 @@ pub fn draw(canvas: &mut WindowCanvas, textures: &mut Vec<Texture>) -> Result<()
 }
 
 // All tile maps are loaded before program start.
-pub fn load_tile_maps(maps: &Vec<TileMap>) {
-
-}
+// pub fn load_tile_maps(maps: &[&[u8; TILE_MAP_SIZE]; AMOUNT_TILE_MAPS]) {}
 
 fn build_textures(textures: &mut Vec<Texture>) -> Result<(), String> {
     if textures.len() == AMOUNT_LAYERS {
@@ -140,7 +139,7 @@ fn build_textures(textures: &mut Vec<Texture>) -> Result<(), String> {
     Ok(())
 }
 
-fn proc_texture(index: usize, textures: &mut Vec<Texture>, buffer: &[u8]) -> Result<(), String> {
+fn proc_texture(index: usize, textures: &mut Vec<Texture>, buffer: &Vec<u8>) -> Result<(), String> {
     match textures.get_mut(index) {
         None => return Err("Textures vector is missing a layer!".to_string()),
         Some(tex) => {
@@ -153,4 +152,39 @@ fn proc_texture(index: usize, textures: &mut Vec<Texture>, buffer: &[u8]) -> Res
 }
 
 pub mod commands {
+    use crate::render::*;
+
+    pub fn enable_pixel_layer() {
+        LAYERS.lock().unwrap().allow_pixel_layer = true;
+    }
+
+    pub fn disable_pixel_layer() {
+        LAYERS.lock().unwrap().allow_pixel_layer = false;
+    }
+
+    pub fn draw_pixel(x: u32, y: u32, color: u16) {
+        let mut layers = LAYERS.lock().unwrap();
+        if !layers.allow_pixel_layer {
+            return;
+        }
+
+        match layers.layers.get_mut(AMOUNT_LAYERS - 1).unwrap() {
+            Layer::Layer5(buffer) => {
+                let offset = (x * 4) as usize + (y as usize * LAYERS_PITCH);
+                let rgba = vec![
+                    (15_u16 & (color >> 12)) as u8 * 17,
+                    (15_u16 & (color >> 8)) as u8 * 17,
+                    (15_u16 & (color >> 4)) as u8 * 17,
+                    (15_u16 & color) as u8 * 17,
+                ];
+
+                buffer.splice((offset)..(offset + 4), rgba.iter().cloned());
+            }
+            _ => {
+                //TODO Allow for self contained errors.
+                //TODO This should end the "program."
+                error!("Tried to draw to pixel buffer and failed!");
+            }
+        }
+    }
 }
