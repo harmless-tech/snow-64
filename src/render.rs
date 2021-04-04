@@ -7,16 +7,17 @@ use sdl2::{
     video::WindowContext,
 };
 use std::{borrow::BorrowMut, sync::Mutex};
+use crate::render::Layer::Pixel;
 
 lazy_static! {
     static ref LAYERS: Mutex<Layers> = Mutex::new(Layers {
         layers: [
-            vec![0_u8; LAYERS_SIZE],
-            vec![0_u8; LAYERS_SIZE],
-            vec![0_u8; LAYERS_SIZE],
-            vec![0_u8; LAYERS_SIZE],
-            vec![0_u8; LAYERS_SIZE],
-            vec![0_u8; LAYERS_SIZE]
+            vec![0_u8; LAYER_SIZE],
+            vec![0_u8; LAYER_SIZE],
+            vec![0_u8; LAYER_SIZE],
+            vec![0_u8; LAYER_SIZE],
+            vec![0_u8; LAYER_SIZE],
+            vec![0_u8; LAYER_SIZE]
         ],
         current_layer: 0,
         allow_pixel_layer: false,
@@ -33,13 +34,13 @@ lazy_static! {
     });
 }
 
-const LAYERS_WIDTH: u32 = 256;
-const LAYERS_HEIGHT: u32 = 256;
-const LAYERS_PITCH: usize = LAYERS_WIDTH as usize * 4;
-const LAYERS_SIZE: usize = LAYERS_PITCH * LAYERS_HEIGHT as usize;
-const LAYERS_RECT: (i32, i32, u32, u32) = (0, 0, LAYERS_WIDTH, LAYERS_HEIGHT);
-const AMOUNT_LAYERS: usize = 6;
-const LAYERS_TYPES: [Layer; AMOUNT_LAYERS] = [
+const LAYER_WIDTH: u32 = 256;
+const LAYER_HEIGHT: u32 = 256;
+const LAYER_PITCH: usize = LAYER_WIDTH as usize * 4;
+const LAYER_SIZE: usize = LAYER_PITCH * LAYER_HEIGHT as usize;
+const LAYER_RECT: (i32, i32, u32, u32) = (0, 0, LAYER_WIDTH, LAYER_HEIGHT);
+const AMOUNT_LAYER: usize = 6;
+const LAYER_TYPES: [Layer; AMOUNT_LAYER] = [
     Layer::Tile,
     Layer::Entity,
     Layer::Tile,
@@ -57,7 +58,7 @@ enum Layer {
 }
 
 struct Layers {
-    layers: [Vec<u8>; AMOUNT_LAYERS], // Pixel, Text, Entity, Tile, Entity, Tile.
+    layers: [Vec<u8>; AMOUNT_LAYER], // Pixel, Text, Entity, Tile, Entity, Tile.
     current_layer: u32,
     allow_pixel_layer: bool,
 }
@@ -68,22 +69,25 @@ const TILE_PITCH: usize = TILE_WIDTH as usize * 4;
 const TILE_SIZE: usize = TILE_PITCH * TILE_HEIGHT as usize;
 const AMOUNT_TILES: usize = 32;
 
-const TILE_MAP_SIZE: usize = TILE_SIZE * 32;
-const AMOUNT_TILE_MAPS: usize = 4;
+const TILE_MAP_TILE_COUNT: u32 = 16;
+const TILE_MAP_SIZE: usize = TILE_SIZE * 16 as usize;
+const AMOUNT_TILE_MAP: usize = 4;
 
 struct TileMaps {
-    tile_maps: [Vec<u8>; AMOUNT_TILE_MAPS],
+    tile_maps: [Vec<u8>; AMOUNT_TILE_MAP],
     current_map: u32,
     current_tile: u32,
 }
 
+//TODO Font Map!
+
 pub fn init_textures(tex_creator: &TextureCreator<WindowContext>) -> Result<Vec<Texture>, String> {
     let mut textures = Vec::<Texture>::new();
-    for _i in 0..AMOUNT_LAYERS {
+    for _i in 0..AMOUNT_LAYER {
         let mut tex = tex_creator
-            .create_texture_streaming(PixelFormatEnum::RGBA32, LAYERS_WIDTH, LAYERS_HEIGHT)
+            .create_texture_streaming(PixelFormatEnum::RGBA32, LAYER_WIDTH, LAYER_HEIGHT)
             .map_err(|e| e.to_string())?;
-        tex.set_blend_mode(BlendMode::Blend);
+        tex.set_blend_mode(BlendMode::None);
         textures.push(tex);
     }
 
@@ -111,10 +115,12 @@ pub fn draw(canvas: &mut WindowCanvas, textures: &mut Vec<Texture>) -> Result<()
 
 // This function bypasses the pixel layer check!
 pub fn load_image_into_layer(layer: usize, img: &[u8]) {
-    if layer < AMOUNT_LAYERS {
+    if layer < AMOUNT_LAYER {
         let mut layers = LAYERS.lock().unwrap();
-        let mut buffer = layers.layers.get_mut(layer).unwrap();
-        buffer.splice(0..LAYERS_SIZE, img.iter().cloned());
+        let buffer = layers.layers.get_mut(layer).unwrap();
+        buffer.splice(0..LAYER_SIZE, img.iter().cloned());
+
+        debug!("Pls: {}", layer);
     }
     else {
         error!("load_image_into_layer received a layer value greater then the amount of layers!");
@@ -122,14 +128,13 @@ pub fn load_image_into_layer(layer: usize, img: &[u8]) {
 }
 
 fn build_textures(textures: &mut Vec<Texture>) -> Result<(), String> {
-    if textures.len() == AMOUNT_LAYERS {
+    if textures.len() == AMOUNT_LAYER {
         let layers = LAYERS.lock().unwrap();
 
         for (i, layer) in layers.layers.iter().enumerate() {
-            if LAYERS_TYPES[i] != Layer::Pixel
-                || (i == AMOUNT_LAYERS - 1 && layers.allow_pixel_layer)
+            if LAYER_TYPES[i] != Layer::Pixel || (i == AMOUNT_LAYER - 1 && layers.allow_pixel_layer)
             {
-                proc_texture(i, textures.borrow_mut(), layer)?
+                proc_texture(i, textures.borrow_mut(), layer)?;
             }
         }
     }
@@ -144,7 +149,7 @@ fn proc_texture(index: usize, textures: &mut Vec<Texture>, buffer: &[u8]) -> Res
     match textures.get_mut(index) {
         None => return Err("Textures vector is missing a layer!".to_string()),
         Some(tex) => {
-            tex.update(Rect::from(LAYERS_RECT), buffer, LAYERS_PITCH as usize)
+            tex.update(Rect::from(LAYER_RECT), buffer, LAYER_PITCH)
                 .map_err(|e| e.to_string())?;
         }
     }
@@ -154,13 +159,13 @@ fn proc_texture(index: usize, textures: &mut Vec<Texture>, buffer: &[u8]) -> Res
 
 pub mod colors {
     pub const WHITE: u16 = create_color(15, 15, 15, 15);
-    pub const BLACK: u16 = create_color(0, 0, 0, 0);
+    pub const BLACK: u16 = create_color(0, 0, 0, 15);
 
     pub const fn create_color(r: u8, g: u8, b: u8, a: u8) -> u16 {
-        ((((r & 15) as u16) << 12)
+        (((r & 15) as u16) << 12)
             | (((g & 15) as u16) << 8)
             | (((b & 15) as u16) << 4)
-            | ((a & 15) as u16))
+            | ((a & 15) as u16)
     }
 
     pub const fn map_color(color: u16) -> (u8, u8, u8, u8) {
@@ -178,6 +183,7 @@ pub mod colors {
     }
 }
 
+//TODO Allow for TileMaps to be swapped out at program runtime?
 pub mod commands {
     use crate::render::*;
     use rhai::plugin::*;
@@ -212,9 +218,9 @@ pub mod commands {
             return;
         }
 
-        let buffer = layers.layers.get_mut(AMOUNT_LAYERS - 1).unwrap();
+        let buffer = layers.layers.get_mut(AMOUNT_LAYER - 1).unwrap();
 
-        let offset = (x * 4) as usize + (y as usize * LAYERS_PITCH);
+        let offset = (x * 4) as usize + (y as usize * LAYER_PITCH);
         let rgba: Vec<u8> = colors::map_color_vec(color)
             .iter()
             .map(|val| *val as u8)
