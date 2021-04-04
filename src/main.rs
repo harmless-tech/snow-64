@@ -7,7 +7,7 @@ mod update;
 
 extern crate sdl2;
 
-use image::RgbaImage;
+use image::{EncodableLayout, RgbaImage};
 use log::{debug, error, info, trace, warn};
 use rand::Rng;
 use sdl2::{
@@ -59,7 +59,7 @@ fn main() -> Result<(), String> {
     let mut textures = render::init_textures(&texture_creator)?;
 
     info!("Boot!");
-    let img =
+    //let img =
 
     info!("Using SDL_Renderer \"{}.\"", canvas.info().name);
     info!("Start!");
@@ -76,7 +76,7 @@ fn main() -> Result<(), String> {
     scripting::run_rhai_program("./test/tes-game/entry.rhai")?;
 
     render::commands::enable_pixel_layer();
-    for x in 0..256 {
+    /*for x in 0..256 {
         for y in 0..256 {
             render::commands::draw_pixel(
                 x as u32,
@@ -84,7 +84,7 @@ fn main() -> Result<(), String> {
                 rand::thread_rng().gen_range(0..50625),
             );
         }
-    }
+    }*/
 
     for x in 0..16 {
         for y in 0..16 {
@@ -97,6 +97,8 @@ fn main() -> Result<(), String> {
             render::commands::draw_pixel(x as u32, y as u32, 15);
         }
     }
+
+    render::load_image_into_layer(0, get_icon().as_bytes());
     // /\
 
     render::draw(&mut canvas, textures.borrow_mut())?; //TODO Remove! (First and only draw)
@@ -151,7 +153,7 @@ fn main() -> Result<(), String> {
 
 fn get_icon() -> RgbaImage {
     image::load(
-        Cursor::new(&include_bytes!("./assets/icon.png")[..]),
+        Cursor::new(&include_bytes!("./assets/icon-256.png")[..]),
         image::ImageFormat::Png,
     )
     .unwrap()
@@ -159,7 +161,12 @@ fn get_icon() -> RgbaImage {
 }
 
 fn setup_window_icon(window: &mut Window) -> Result<(), String> {
-    let mut img = get_icon();
+    let mut img = image::load(
+        Cursor::new(&include_bytes!("./assets/icon-512.png")[..]),
+        image::ImageFormat::Png,
+    )
+    .unwrap()
+    .to_rgba8();
 
     let width = img.width();
     let height = img.height();

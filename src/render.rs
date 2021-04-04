@@ -10,23 +10,23 @@ use std::{borrow::BorrowMut, sync::Mutex};
 
 lazy_static! {
     static ref LAYERS: Mutex<Layers> = Mutex::new(Layers {
-        layers: vec![
-            Layer::Layer0(vec![0_u8; LAYERS_SIZE]),
-            Layer::Layer1(vec![0_u8; LAYERS_SIZE]),
-            Layer::Layer2(vec![0_u8; LAYERS_SIZE]),
-            Layer::Layer3(vec![0_u8; LAYERS_SIZE]),
-            Layer::Layer4(vec![0_u8; LAYERS_SIZE]),
-            Layer::Layer5(vec![0_u8; LAYERS_SIZE]),
+        layers: [
+            vec![0_u8; LAYERS_SIZE],
+            vec![0_u8; LAYERS_SIZE],
+            vec![0_u8; LAYERS_SIZE],
+            vec![0_u8; LAYERS_SIZE],
+            vec![0_u8; LAYERS_SIZE],
+            vec![0_u8; LAYERS_SIZE]
         ],
         current_layer: 0,
         allow_pixel_layer: false,
     });
     static ref TILE_MAPS: Mutex<TileMaps> = Mutex::new(TileMaps {
-        tile_maps: vec![
-            TileMap::Map0(vec![0_u8; TILE_MAP_SIZE]),
-            TileMap::Map1(vec![0_u8; TILE_MAP_SIZE]),
-            TileMap::Map2(vec![0_u8; TILE_MAP_SIZE]),
-            TileMap::Map3(vec![0_u8; TILE_MAP_SIZE]),
+        tile_maps: [
+            vec![0_u8; TILE_MAP_SIZE],
+            vec![0_u8; TILE_MAP_SIZE],
+            vec![0_u8; TILE_MAP_SIZE],
+            vec![0_u8; TILE_MAP_SIZE]
         ],
         current_map: 0,
         current_tile: 0,
@@ -39,18 +39,25 @@ const LAYERS_PITCH: usize = LAYERS_WIDTH as usize * 4;
 const LAYERS_SIZE: usize = LAYERS_PITCH * LAYERS_HEIGHT as usize;
 const LAYERS_RECT: (i32, i32, u32, u32) = (0, 0, LAYERS_WIDTH, LAYERS_HEIGHT);
 const AMOUNT_LAYERS: usize = 6;
+const LAYERS_TYPES: [Layer; AMOUNT_LAYERS] = [
+    Layer::Tile,
+    Layer::Entity,
+    Layer::Tile,
+    Layer::Entity,
+    Layer::Text,
+    Layer::Pixel,
+];
 
+#[derive(Eq, PartialEq)]
 enum Layer {
-    Layer0(Vec<u8>), // Tile.
-    Layer1(Vec<u8>), // Entity.
-    Layer2(Vec<u8>), // Tile.
-    Layer3(Vec<u8>), // Entity.
-    Layer4(Vec<u8>), // Text.
-    Layer5(Vec<u8>), // Pixel.
+    Tile,
+    Entity,
+    Text,
+    Pixel,
 }
 
 struct Layers {
-    layers: Vec<Layer>,
+    layers: [Vec<u8>; AMOUNT_LAYERS], // Pixel, Text, Entity, Tile, Entity, Tile.
     current_layer: u32,
     allow_pixel_layer: bool,
 }
@@ -64,15 +71,8 @@ const AMOUNT_TILES: usize = 32;
 const TILE_MAP_SIZE: usize = TILE_SIZE * 32;
 const AMOUNT_TILE_MAPS: usize = 4;
 
-enum TileMap {
-    Map0(Vec<u8>),
-    Map1(Vec<u8>),
-    Map2(Vec<u8>),
-    Map3(Vec<u8>),
-}
-
 struct TileMaps {
-    tile_maps: Vec<TileMap>,
+    tile_maps: [Vec<u8>; AMOUNT_TILE_MAPS],
     current_map: u32,
     current_tile: u32,
 }
@@ -109,33 +109,32 @@ pub fn draw(canvas: &mut WindowCanvas, textures: &mut Vec<Texture>) -> Result<()
 // Tiles should be handled in another part of the program.
 // pub fn load_tile_maps(maps: &[&[u8; TILE_MAP_SIZE]; AMOUNT_TILE_MAPS]) {}
 
-// This function bypasses the layer check!
-pub fn load_image_into_layer(layer: usize, buffer: &[u8]) {
+// This function bypasses the pixel layer check!
+pub fn load_image_into_layer(layer: usize, img: &[u8]) {
+    if layer < AMOUNT_LAYERS {
+        let mut layers = LAYERS.lock().unwrap();
+        let mut buffer = layers.layers.get_mut(layer).unwrap();
+        buffer.splice(0..LAYERS_SIZE, img.iter().cloned());
+    }
+    else {
+        error!("load_image_into_layer received a layer value greater then the amount of layers!");
+    }
 }
 
 fn build_textures(textures: &mut Vec<Texture>) -> Result<(), String> {
     if textures.len() == AMOUNT_LAYERS {
         let layers = LAYERS.lock().unwrap();
 
-        for layer in layers.layers.iter() {
-            match layer {
-                Layer::Layer0(buffer) => proc_texture(0, textures.borrow_mut(), buffer)?,
-                Layer::Layer1(buffer) => proc_texture(1, textures.borrow_mut(), buffer)?,
-                Layer::Layer2(buffer) => proc_texture(2, textures.borrow_mut(), buffer)?,
-                Layer::Layer3(buffer) => proc_texture(3, textures.borrow_mut(), buffer)?,
-                Layer::Layer4(buffer) => proc_texture(4, textures.borrow_mut(), buffer)?,
-                Layer::Layer5(buffer) => {
-                    if layers.allow_pixel_layer {
-                        proc_texture(5, textures.borrow_mut(), buffer)?;
-                    }
-                }
+        for (i, layer) in layers.layers.iter().enumerate() {
+            if LAYERS_TYPES[i] != Layer::Pixel
+                || (i == AMOUNT_LAYERS - 1 && layers.allow_pixel_layer)
+            {
+                proc_texture(i, textures.borrow_mut(), layer)?
             }
         }
     }
     else {
-        return Err(
-            "Wrong number of texture layers were passed to the render function!".to_string(),
-        );
+        return Err("Wrong number of texture layers were passed to the draw function!".to_string());
     }
 
     Ok(())
@@ -158,7 +157,10 @@ pub mod colors {
     pub const BLACK: u16 = create_color(0, 0, 0, 0);
 
     pub const fn create_color(r: u8, g: u8, b: u8, a: u8) -> u16 {
-        ((((r & 15) as u16) << 12) | (((g & 15) as u16) << 8) | (((b & 15) as u16) << 4) | ((a & 15) as u16))
+        ((((r & 15) as u16) << 12)
+            | (((g & 15) as u16) << 8)
+            | (((b & 15) as u16) << 4)
+            | ((a & 15) as u16))
     }
 
     pub const fn map_color(color: u16) -> (u8, u8, u8, u8) {
@@ -171,8 +173,8 @@ pub mod colors {
     }
 
     pub fn map_color_vec(color: u16) -> Vec<u8> {
-        let (r, g, b , a) = map_color(color);
-        vec![r, g, b , a]
+        let (r, g, b, a) = map_color(color);
+        vec![r, g, b, a]
     }
 }
 
@@ -185,6 +187,8 @@ pub mod commands {
     pub fn create_color(r: u8, g: u8, b: u8, a: u8) -> u16 {
         colors::create_color(r, g, b, a)
     }
+
+    // Tile Stuff
 
     // Pixel Stuff
     #[export_fn]
@@ -208,21 +212,14 @@ pub mod commands {
             return;
         }
 
-        match layers.layers.get_mut(AMOUNT_LAYERS - 1).unwrap() {
-            Layer::Layer5(buffer) => {
-                let offset = (x * 4) as usize + (y as usize * LAYERS_PITCH);
-                let rgba: Vec<u8> = colors::map_color_vec(color)
-                    .iter()
-                    .map(|val| *val as u8)
-                    .collect();
+        let buffer = layers.layers.get_mut(AMOUNT_LAYERS - 1).unwrap();
 
-                buffer.splice((offset)..(offset + 4), rgba.iter().cloned());
-            }
-            _ => {
-                //TODO Allow for self contained errors.
-                //TODO This should end the "program."
-                error!("Tried to draw to pixel buffer and failed!");
-            }
-        }
+        let offset = (x * 4) as usize + (y as usize * LAYERS_PITCH);
+        let rgba: Vec<u8> = colors::map_color_vec(color)
+            .iter()
+            .map(|val| *val as u8)
+            .collect();
+
+        buffer.splice((offset)..(offset + 4), rgba.iter().cloned());
     }
 }
