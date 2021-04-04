@@ -7,7 +7,9 @@ mod update;
 
 extern crate sdl2;
 
+use image::RgbaImage;
 use log::{debug, error, info, trace, warn};
+use rand::Rng;
 use sdl2::{
     event::Event,
     keyboard::Keycode,
@@ -21,7 +23,6 @@ use std::{
     io::Cursor,
     rc::Rc,
 };
-use rand::Rng;
 
 fn init() -> Result<(), String> {
     Ok(())
@@ -37,7 +38,7 @@ fn main() -> Result<(), String> {
 
     info!("Window Init.");
     let mut window = video_subsystem
-        .window("snow-64 alpha", 512, 512)
+        .window("snow-64 alpha build", 256, 256)
         .position_centered()
         .vulkan()
         .allow_highdpi()
@@ -57,6 +58,9 @@ fn main() -> Result<(), String> {
     let texture_creator = canvas.texture_creator();
     let mut textures = render::init_textures(&texture_creator)?;
 
+    info!("Boot!");
+    let img =
+
     info!("Using SDL_Renderer \"{}.\"", canvas.info().name);
     info!("Start!");
 
@@ -66,15 +70,34 @@ fn main() -> Result<(), String> {
     // v.splice(0..10, [1_u8; 10].iter().cloned());
     // debug!("{:?}", v);
 
+    // debug!("Mix: {}", render::commands::create_color(15, 15, 15, 15));
+    // debug!("Mix: {}", render::commands::create_color(u32::MAX, u32::MAX, u32::MAX, u32::MAX));
+
+    scripting::run_rhai_program("./test/tes-game/entry.rhai")?;
+
     render::commands::enable_pixel_layer();
-    for x in 0..512 {
-        for y in 0..512 {
-            render::commands::draw_pixel(x as u32, y as u32, rand::thread_rng().gen_range(0..50625) as u16);
+    for x in 0..256 {
+        for y in 0..256 {
+            render::commands::draw_pixel(
+                x as u32,
+                y as u32,
+                rand::thread_rng().gen_range(0..50625),
+            );
+        }
+    }
+
+    for x in 0..16 {
+        for y in 0..16 {
+            render::commands::draw_pixel(x as u32, y as u32, render::colors::WHITE);
+        }
+    }
+
+    for x in 16..32 {
+        for y in 0..16 {
+            render::commands::draw_pixel(x as u32, y as u32, 15);
         }
     }
     // /\
-
-    
 
     render::draw(&mut canvas, textures.borrow_mut())?; //TODO Remove! (First and only draw)
 
@@ -95,7 +118,7 @@ fn main() -> Result<(), String> {
                     let (width, height) = canvas.window().size();
                     canvas
                         .window_mut()
-                        .set_size(width + 8, height + 8)
+                        .set_size(width * 2, height * 2)
                         .map_err(|e| e.to_string())?;
                     canvas
                         .window_mut()
@@ -110,7 +133,7 @@ fn main() -> Result<(), String> {
                     let (width, height) = canvas.borrow().window().size();
                     canvas
                         .window_mut()
-                        .set_size(width - 8, height - 8)
+                        .set_size(width / 2, height / 2)
                         .map_err(|e| e.to_string())?;
                     canvas
                         .window_mut()
@@ -126,13 +149,17 @@ fn main() -> Result<(), String> {
     Ok(())
 }
 
-fn setup_window_icon(window: &mut Window) -> Result<(), String> {
-    let mut img = image::load(
+fn get_icon() -> RgbaImage {
+    image::load(
         Cursor::new(&include_bytes!("./assets/icon.png")[..]),
         image::ImageFormat::Png,
     )
     .unwrap()
-    .to_rgba8();
+    .to_rgba8()
+}
+
+fn setup_window_icon(window: &mut Window) -> Result<(), String> {
+    let mut img = get_icon();
 
     let width = img.width();
     let height = img.height();

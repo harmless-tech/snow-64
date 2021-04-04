@@ -1,5 +1,5 @@
-use image::{EncodableLayout, ImageOutputFormat, ImageFormat, ColorType};
 use lazy_static::lazy_static;
+use log::{debug, error};
 use sdl2::{
     pixels::PixelFormatEnum,
     rect::Rect,
@@ -7,9 +7,6 @@ use sdl2::{
     video::WindowContext,
 };
 use std::{borrow::BorrowMut, sync::Mutex};
-use log::{error, debug};
-use image::io::Reader;
-use std::io::Cursor;
 
 lazy_static! {
     static ref LAYERS: Mutex<Layers> = Mutex::new(Layers {
@@ -36,8 +33,8 @@ lazy_static! {
     });
 }
 
-const LAYERS_WIDTH: u32 = 512;
-const LAYERS_HEIGHT: u32 = 512;
+const LAYERS_WIDTH: u32 = 256;
+const LAYERS_HEIGHT: u32 = 256;
 const LAYERS_PITCH: usize = LAYERS_WIDTH as usize * 4;
 const LAYERS_SIZE: usize = LAYERS_PITCH * LAYERS_HEIGHT as usize;
 const LAYERS_RECT: (i32, i32, u32, u32) = (0, 0, LAYERS_WIDTH, LAYERS_HEIGHT);
@@ -109,7 +106,12 @@ pub fn draw(canvas: &mut WindowCanvas, textures: &mut Vec<Texture>) -> Result<()
 }
 
 // All tile maps are loaded before program start.
+// Tiles should be handled in another part of the program.
 // pub fn load_tile_maps(maps: &[&[u8; TILE_MAP_SIZE]; AMOUNT_TILE_MAPS]) {}
+
+// This function bypasses the layer check!
+pub fn load_image_into_layer(layer: usize, buffer: &[u8]) {
+}
 
 fn build_textures(textures: &mut Vec<Texture>) -> Result<(), String> {
     if textures.len() == AMOUNT_LAYERS {
@@ -139,7 +141,7 @@ fn build_textures(textures: &mut Vec<Texture>) -> Result<(), String> {
     Ok(())
 }
 
-fn proc_texture(index: usize, textures: &mut Vec<Texture>, buffer: &Vec<u8>) -> Result<(), String> {
+fn proc_texture(index: usize, textures: &mut Vec<Texture>, buffer: &[u8]) -> Result<(), String> {
     match textures.get_mut(index) {
         None => return Err("Textures vector is missing a layer!".to_string()),
         Some(tex) => {
@@ -151,17 +153,55 @@ fn proc_texture(index: usize, textures: &mut Vec<Texture>, buffer: &Vec<u8>) -> 
     Ok(())
 }
 
+pub mod colors {
+    pub const WHITE: u16 = create_color(15, 15, 15, 15);
+    pub const BLACK: u16 = create_color(0, 0, 0, 0);
+
+    pub const fn create_color(r: u8, g: u8, b: u8, a: u8) -> u16 {
+        ((((r & 15) as u16) << 12) | (((g & 15) as u16) << 8) | (((b & 15) as u16) << 4) | ((a & 15) as u16))
+    }
+
+    pub const fn map_color(color: u16) -> (u8, u8, u8, u8) {
+        (
+            (15 & ((color >> 12) as u8)) * 17,
+            (15 & ((color >> 8) as u8)) * 17,
+            (15 & ((color >> 4) as u8)) * 17,
+            ((15 & color) as u8) * 17,
+        )
+    }
+
+    pub fn map_color_vec(color: u16) -> Vec<u8> {
+        let (r, g, b , a) = map_color(color);
+        vec![r, g, b , a]
+    }
+}
+
 pub mod commands {
     use crate::render::*;
+    use rhai::plugin::*;
 
+    // Color Stuff
+    #[export_fn]
+    pub fn create_color(r: u8, g: u8, b: u8, a: u8) -> u16 {
+        colors::create_color(r, g, b, a)
+    }
+
+    // Pixel Stuff
+    #[export_fn]
     pub fn enable_pixel_layer() {
         LAYERS.lock().unwrap().allow_pixel_layer = true;
+
+        debug!("ALLOW PIXEL LAYER");
     }
 
+    #[export_fn]
     pub fn disable_pixel_layer() {
         LAYERS.lock().unwrap().allow_pixel_layer = false;
+
+        debug!("DO NOT ALLOW PIXEL LAYER");
     }
 
+    #[export_fn]
     pub fn draw_pixel(x: u32, y: u32, color: u16) {
         let mut layers = LAYERS.lock().unwrap();
         if !layers.allow_pixel_layer {
@@ -171,12 +211,10 @@ pub mod commands {
         match layers.layers.get_mut(AMOUNT_LAYERS - 1).unwrap() {
             Layer::Layer5(buffer) => {
                 let offset = (x * 4) as usize + (y as usize * LAYERS_PITCH);
-                let rgba = vec![
-                    (15_u16 & (color >> 12)) as u8 * 17,
-                    (15_u16 & (color >> 8)) as u8 * 17,
-                    (15_u16 & (color >> 4)) as u8 * 17,
-                    (15_u16 & color) as u8 * 17,
-                ];
+                let rgba: Vec<u8> = colors::map_color_vec(color)
+                    .iter()
+                    .map(|val| *val as u8)
+                    .collect();
 
                 buffer.splice((offset)..(offset + 4), rgba.iter().cloned());
             }

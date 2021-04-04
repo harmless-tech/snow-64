@@ -4,7 +4,7 @@ Snow-64 is an experimental fantasy console.
 # Features (Planned)
 
 - 16-bit color (R - 4 bits, G - 4 bits, B - 4 bits, A - 4 bits) (u16)
-- 512 x 512 screen resolution. (Can be scaled up)
+- 256 x 256 screen resolution. (Can be scaled up) (Maybe a 512 x 256 option)
 - 16 x 16 sprites with 5 layers. (Text, Entities, Tiles, Entities, Tiles)
 - Direct pixel draw mode. (On its own top layer, a 6th layer)
 - 512 tile x 512 tile maps. (This is loaded onto the Tiles layer)
