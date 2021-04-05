@@ -23,22 +23,19 @@ const DEBUG: bool = true;
 #[cfg(not(debug_assertions))]
 const DEBUG: bool = false;
 
-struct Snow64();
+struct Snow64(); // Should hold program data?
 impl Snow64 {
     fn new() -> Self {
         Snow64()
     }
 
-    fn fixed_update(&self) {
-        trace!("Fix");
+    fn fixed_update(&self, time_step: f64) {
     }
 
-    fn update(&self) {
-        trace!("Fix");
+    fn update(&self, time_step: f64) {
     }
 
-    fn render(&self) {
-        trace!("Fix");
+    fn draw(&self, time_step: f64) {
     }
 }
 

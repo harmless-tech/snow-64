@@ -45,16 +45,21 @@ jobs:
         run: |
           cargo install cargo-vcpkg
           cargo vcpkg build
-      - name: Build
-        run: cargo build --verbose --workspace --release
       - name: Run tests
         run: cargo test --verbose --workspace --release
+      - name: Build
+        run: cargo build --verbose --workspace --release
+      - name: Zip
+        uses: papeloto/action-zip@v1
+        with:
+          files: ./target/release/snow-64
+          dest: snow64-linux.zip
       - name: Upload to release
         uses: alexellis/upload-assets@0.3.0
         env:
           GITHUB_TOKEN: ${{ github.token }}
         with:
-          asset_paths: '["./target/release/snow-64"]'
+          asset_paths: '["snow64-linux.zip"]'
 
   build-macos:
     needs: [ release ]
@@ -76,16 +81,21 @@ jobs:
         run: |
           cargo install cargo-vcpkg
           cargo vcpkg build
-      - name: Build
-        run: cargo build --verbose --workspace --release
       - name: Run tests
         run: cargo test --verbose --workspace --release
+      - name: Build
+        run: cargo build --verbose --workspace --release
+      - name: Zip
+        uses: papeloto/action-zip@v1
+        with:
+          files: ./target/release/snow-64
+          dest: snow64-macos.zip
       - name: Upload to release
         uses: alexellis/upload-assets@0.3.0
         env:
           GITHUB_TOKEN: ${{ github.token }}
         with:
-          asset_paths: '["./target/release/snow-64"]'
+          asset_paths: '["snow64-macos.zip"]'
 
   build-windows:
     needs: [ release ]
@@ -107,13 +117,18 @@ jobs:
         run: |
           cargo install cargo-vcpkg
           cargo vcpkg build
-      - name: Build
-        run: cargo build --verbose --workspace --release
       - name: Run tests
         run: cargo test --verbose --workspace --release
+      - name: Build
+        run: cargo build --verbose --workspace --
+      - name: Zip
+        uses: papeloto/action-zip@v1
+        with:
+          files: ./target/release/snow-64.exe
+          dest: snow64-windows.zip
       - name: Upload to release
         uses: alexellis/upload-assets@0.3.0
         env:
           GITHUB_TOKEN: ${{ github.token }}
         with:
-          asset_paths: '["./target/release/snow-64.exe"]'
+          asset_paths: '["snow64-windows.zip"]'
