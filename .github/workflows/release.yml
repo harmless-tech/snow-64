@@ -48,8 +48,8 @@ jobs:
       - name: Add artifacts to GitHub release
         uses: Roang-zero1/github-upload-release-artifacts-action@master
         with:
-          args:
-            - target/release/snow-64
+          args: |
+            target/release/snow-64
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -80,8 +80,8 @@ jobs:
       - name: Add artifacts to GitHub release
         uses: Roang-zero1/github-upload-release-artifacts-action@master
         with:
-          args:
-            - target/release/snow-64
+          args: |
+            target/release/snow-64
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -112,7 +112,7 @@ jobs:
       - name: Add artifacts to GitHub release
         uses: Roang-zero1/github-upload-release-artifacts-action@master
         with:
-          args:
-            - target/release/snow-64.exe
+          args: |
+            target/release/snow-64.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
