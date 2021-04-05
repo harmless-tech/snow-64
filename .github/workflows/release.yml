@@ -13,13 +13,17 @@ jobs:
     runs-on: ubuntu-latest
     # Should this be a draft?
     steps:
-      - name: Create GitHub release
-        uses: Roang-zero1/github-create-release-action@master
+      - uses: actions/checkout@v2
+      - uses: actions-ecosystem/action-regex-match@v2
+        id: regex-tag
         with:
-          prerelease_regex: "^v[[:digit:]][[:digit:]]*\\.[[:digit:]][[:digit:]]*\\.[[:digit:]][[:digit:]]*/[[:alnum:]]*$"
-          version_regex: "^v[[:digit:]][[:digit:]]*\\.[[:digit:]][[:digit:]]*\\.[[:digit:]][[:digit:]]*$"
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          text: ${{ github.ref }}
+          regex: '^refs\/tags\/v\d+\.\d+\.\d+$'
+      - name: Create release
+        uses: ncipollo/release-action@v1
+        with:
+          prerelease: ${{ steps.regex-tag.outputs.match == '' }}
+          token: ${{ secrets.GITHUB_TOKEN }}
 
   build-linux:
     needs: [ release ]
@@ -45,13 +49,12 @@ jobs:
         run: cargo build --verbose --workspace --release
       - name: Run tests
         run: cargo test --verbose --workspace --release
-      - name: Add artifacts to GitHub release
-        uses: Roang-zero1/github-upload-release-artifacts-action@master
-        with:
-          args: |
-            target/release/snow-64
+      - name: Upload to release
+        uses: alexellis/upload-assets@0.3.0
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          asset_paths: '["./target/release/snow-64"]'
 
   build-macos:
     needs: [ release ]
@@ -77,13 +80,12 @@ jobs:
         run: cargo build --verbose --workspace --release
       - name: Run tests
         run: cargo test --verbose --workspace --release
-      - name: Add artifacts to GitHub release
-        uses: Roang-zero1/github-upload-release-artifacts-action@master
-        with:
-          args: |
-            target/release/snow-64
+      - name: Upload to release
+        uses: alexellis/upload-assets@0.3.0
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          asset_paths: '["./target/release/snow-64"]'
 
   build-windows:
     needs: [ release ]
@@ -109,10 +111,9 @@ jobs:
         run: cargo build --verbose --workspace --release
       - name: Run tests
         run: cargo test --verbose --workspace --release
-      - name: Add artifacts to GitHub release
-        uses: Roang-zero1/github-upload-release-artifacts-action@master
-        with:
-          args: |
-            target/release/snow-64.exe
+      - name: Upload to release
+        uses: alexellis/upload-assets@0.3.0
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          asset_paths: '["./target/release/snow-64.exe"]'
