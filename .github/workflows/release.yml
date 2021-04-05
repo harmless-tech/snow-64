@@ -17,7 +17,7 @@ jobs:
         uses: Roang-zero1/github-create-release-action@master
         with:
           version_regex: '^v[[:digit:]][[:digit:]]*\.[[:digit:]][[:digit:]]*\.[[:digit:]][[:digit:]]*$'
-          prerelease_regex: '^v[[:digit:]][[:digit:]]*\.[[:digit:]][[:digit:]]*\.[[:digit:]][[:digit:]]*/'
+          prerelease_regex: '^v[[:digit:]][[:digit:]]*\.[[:digit:]][[:digit:]]*\.[[:digit:]][[:digit:]]*/[[:alnum:]]*$'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
