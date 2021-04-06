@@ -7,7 +7,7 @@ use log::error;
 pub fn run_program(program: Program) {
     match program {
         Program::Native() => {}
-        Program::NativeAddon() => {}
+        Program::NativeAddon() => {} // Nah
         Program::Rhai() => {}
         Program::Wren() => {
             error!("Not yet!");

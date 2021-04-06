@@ -17,6 +17,11 @@ use std::{
 };
 use sdl2::render::{WindowCanvas, Texture};
 use std::cmp::max;
+use sdl2::rect::Rect;
+use crate::render::colors::WHITE;
+
+const WIDTH: u32 = 256;
+const HEIGHT: u32 = 256;
 
 #[cfg(debug_assertions)]
 const DEBUG: bool = true;
@@ -37,16 +42,31 @@ impl Snow64 {
 
     fn draw(&self, time_step: f64) {
     }
+
+    fn event(&self, event: Event) {
+    }
 }
 
 fn init(sdl_context: &Sdl, canvas: &mut WindowCanvas, textures: &mut Vec<Texture>, debug: bool) -> Result<(), String> {
     let mut snow64 = Snow64::new();
-
     let mut event_pump = sdl_context.event_pump()?;
-    'running: loop {
+
+    render::commands::toggle_pixel_layer();
+    // render::commands::draw_pixel(255, 255, WHITE);
+    for x in 0..(256) {
+        for y in 0..(256) {
+            render::commands::draw_pixel(x, y, WHITE);
+        }
+    }
+    // render::draw(canvas, textures);
+
+    game_loop(snow64, 60, 0.1, |snow| {
+        // Fixed Update
+    }, |snow| {
+        // Events
         for event in event_pump.poll_iter() {
             match event {
-                Event::Quit { .. } => break 'running,
+                Event::Quit { .. } => snow.exit(),
                 Event::KeyDown {
                     keycode: Some(key),
                     keymod: m,
@@ -54,7 +74,7 @@ fn init(sdl_context: &Sdl, canvas: &mut WindowCanvas, textures: &mut Vec<Texture
                 } => {
                     debug!("mod: {}", m);
                     match (key, (m & Mod::LCTRLMOD) == Mod::LCTRLMOD) {
-                        (Keycode::Q, true) => break 'running,
+                        (Keycode::Q, true) => snow.exit(),
                         (_, _) => {}
                     }
                 },
@@ -67,11 +87,9 @@ fn init(sdl_context: &Sdl, canvas: &mut WindowCanvas, textures: &mut Vec<Texture
                 _ => {}
             }
         }
-    }
 
-    game_loop(snow64, 60, 0.1, |snow| {
-        snow.exit();
-    }, |snow| {
+        // Update
+        // Draw
     });
 
     Ok(())
@@ -95,7 +113,7 @@ fn main() -> Result<(), String> {
 
     info!("Window Init.");
     let mut window = video_subsystem
-        .window("snow-64 alpha build", 256, 256)
+        .window("snow-64 alpha build", 1024, 1024)
         .position_centered()
         .vulkan()
         .allow_highdpi()
@@ -113,12 +131,14 @@ fn main() -> Result<(), String> {
     info!("Renderer Init.");
     let mut canvas = window.into_canvas().build().map_err(|e| e.to_string())?;
     canvas.set_blend_mode(BlendMode::Blend);
+    canvas.set_viewport(Some(Rect::new(0, 0, WIDTH, HEIGHT)));
+    canvas.set_logical_size(WIDTH, HEIGHT).map_err(|e| e.to_string())?;
     let texture_creator = canvas.texture_creator();
     let mut textures = render::init_textures(&texture_creator)?;
 
     info!("Using SDL_Renderer \"{}.\"", canvas.info().name);
     info!("Boot!");
-    render::load_image_into_layer(0, get_icon().as_bytes());
+    render::load_image_into_layer(0, get_icon().as_bytes(), WIDTH as usize, HEIGHT as usize);
     render::draw(&mut canvas, textures.borrow_mut())?;
 
     info!("Start!");

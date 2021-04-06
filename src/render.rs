@@ -8,6 +8,7 @@ use sdl2::{
     video::WindowContext,
 };
 use std::{borrow::BorrowMut, sync::Mutex};
+use std::collections::HashMap;
 
 lazy_static! {
     static ref LAYERS: Mutex<Layers> = Mutex::new(Layers {
@@ -19,8 +20,13 @@ lazy_static! {
             vec![0_u8; LAYER_SIZE],
             vec![0_u8; LAYER_SIZE]
         ],
-        current_layer: 0,
+        current_entity_layer: 0,
+        current_tile_layer: 0,
         allow_pixel_layer: false,
+    });
+    static ref ENTITIES: Mutex<Entities> = Mutex::new(Entities {
+        sprite_map: vec![0_u8; SPRITE_MAP_SIZE],
+        e_map: HashMap::with_capacity(MAX_ENTITIES as usize),
     });
     static ref TILE_MAPS: Mutex<TileMaps> = Mutex::new(TileMaps {
         tile_maps: [
@@ -39,8 +45,8 @@ lazy_static! {
     });
 }
 
-const LAYER_WIDTH: u32 = 256;
-const LAYER_HEIGHT: u32 = 256;
+const LAYER_WIDTH: u32 = 512 * TILE_WIDTH;
+const LAYER_HEIGHT: u32 = 256 * TILE_HEIGHT;
 const LAYER_PITCH: usize = LAYER_WIDTH as usize * 4;
 const LAYER_SIZE: usize = LAYER_PITCH * LAYER_HEIGHT as usize;
 const LAYER_RECT: (i32, i32, u32, u32) = (0, 0, LAYER_WIDTH, LAYER_HEIGHT);
@@ -63,19 +69,32 @@ enum Layer {
 }
 
 struct Layers {
-    layers: [Vec<u8>; AMOUNT_LAYER], // Pixel, Text, Entity, Tile, Entity, Tile.
-    current_layer: u32,
+    layers: [Vec<u8>; AMOUNT_LAYER], // Pixel, Text, Entity (1), Tile (1), Entity (0), Tile (0).
+    current_entity_layer: u32,
+    current_tile_layer: u32,
     allow_pixel_layer: bool,
+}
+
+const SPRITE_WIDTH: u32 = 16;
+const SPRITE_HEIGHT: u32 = 16;
+const SPRITE_PITCH: usize = SPRITE_WIDTH as usize * 4;
+const SPRITE_SIZE: usize = SPRITE_PITCH * SPRITE_HEIGHT as usize;
+const SPRITE_MAP_SIZE: usize = SPRITE_SIZE * AMOUNT_SPRITES;
+const AMOUNT_SPRITES: usize = MAX_ENTITIES as usize;
+const MAX_ENTITIES: u32 = 256;
+
+struct Entities {
+    sprite_map: Vec<u8>,
+    e_map: HashMap<u8, (u16, u16, u8, bool)> // x, y, sprite num, render
 }
 
 const TILE_WIDTH: u32 = 16;
 const TILE_HEIGHT: u32 = 16;
 const TILE_PITCH: usize = TILE_WIDTH as usize * 4;
 const TILE_SIZE: usize = TILE_PITCH * TILE_HEIGHT as usize;
-const AMOUNT_TILES: usize = 32;
+const AMOUNT_TILES: usize = 16;
 
-const TILE_MAP_TILE_COUNT: u32 = 16;
-const TILE_MAP_SIZE: usize = TILE_SIZE * 16 as usize;
+const TILE_MAP_SIZE: usize = TILE_SIZE * AMOUNT_TILES;
 const AMOUNT_TILE_MAP: usize = 4;
 
 struct TileMaps {
@@ -101,6 +120,28 @@ struct FontMap {
     current_map_light: bool,
 }
 
+// All tile maps are loaded before program start.
+// Tiles should be handled in another part of the program.
+// pub fn load_tile_maps(maps: &[&[u8; TILE_MAP_SIZE]; AMOUNT_TILE_MAPS]) {}
+
+// All font maps are loaded before program start.
+// pub fn load_font_maps(light: &[u8; FONT_SIZE], dark: &[u8; FONT_SIZE]) {}
+
+// WARN: This function bypasses a lot of checks!!!
+pub fn load_image_into_layer(layer: usize, img: &[u8], width: usize, height: usize) {
+    if layer < AMOUNT_LAYER {
+        let mut layers = LAYERS.lock().unwrap();
+        let buffer = layers.layers.get_mut(layer).unwrap();
+
+        for i in 0..height {
+            buffer.splice((i * LAYER_WIDTH as usize * 4)..(i * (LAYER_WIDTH as usize) * 4 + width * 4), img[(i * width * 4)..(i * width * 4 + width * 4)].iter().cloned());
+        }
+    }
+    else {
+        error!("load_image_into_layer received a layer value greater then the amount of layers!");
+    }
+}
+
 pub fn init_textures(tex_creator: &TextureCreator<WindowContext>) -> Result<Vec<Texture>, String> {
     let mut textures = Vec::<Texture>::new();
     for _i in 0..AMOUNT_LAYER {
@@ -119,33 +160,15 @@ pub fn draw(canvas: &mut WindowCanvas, textures: &mut Vec<Texture>) -> Result<()
     canvas.clear();
 
     build_textures(textures.borrow_mut())?;
-    let (width, height) = canvas.window().size();
+    let viewport= canvas.viewport();
+    // let (width, height) = canvas.window().size();
     for tex in textures.iter() {
-        canvas.copy(&tex, None, Some(Rect::new(0, 0, width, height)))?;
+        canvas.copy(&tex, Some(viewport), None /*Some(Rect::new(0, 0, width, height))*/)?;
     }
 
     canvas.present();
 
     Ok(())
-}
-
-// All tile maps are loaded before program start.
-// Tiles should be handled in another part of the program.
-// pub fn load_tile_maps(maps: &[&[u8; TILE_MAP_SIZE]; AMOUNT_TILE_MAPS]) {}
-
-// All font maps are loaded before program start.
-// pub fn load_font_maps(light: &[u8; FONT_SIZE], dark: &[u8; FONT_SIZE]) {}
-
-// This function bypasses the pixel layer check!
-pub fn load_image_into_layer(layer: usize, img: &[u8]) {
-    if layer < AMOUNT_LAYER {
-        let mut layers = LAYERS.lock().unwrap();
-        let buffer = layers.layers.get_mut(layer).unwrap();
-        buffer.splice(0..LAYER_SIZE, img.iter().cloned());
-    }
-    else {
-        error!("load_image_into_layer received a layer value greater then the amount of layers!");
-    }
 }
 
 fn build_textures(textures: &mut Vec<Texture>) -> Result<(), String> {
@@ -214,23 +237,59 @@ pub mod commands {
         colors::create_color(r, g, b, a)
     }
 
+    // Layers
+    #[export_fn]
+    pub fn switch_entity_layer() -> u32 {
+        let mut layers = LAYERS.lock().unwrap();
+        layers.current_entity_layer = match layers.current_entity_layer {
+            0 => 1,
+            _ => 0,
+        };
+        layers.current_entity_layer
+    }
+
+    #[export_fn]
+    pub fn switch_tile_layer() -> u32 {
+        let mut layers = LAYERS.lock().unwrap();
+        layers.current_tile_layer = match layers.current_tile_layer {
+            0 => 1,
+            _ => 0,
+        };
+        layers.current_tile_layer
+    }
+
+    #[export_fn]
+    pub fn toggle_pixel_layer() -> bool {
+        let mut layers = LAYERS.lock().unwrap();
+        layers.allow_pixel_layer = !layers.allow_pixel_layer;
+
+        debug!("Pixel Layer: {}", layers.allow_pixel_layer);
+
+        layers.allow_pixel_layer
+    }
+
+    // Entities
+    /*#[export_fn]
+    pub fn create_entity(x: u16, y: u16, sprite: u8, visible: bool) -> u64 {
+        if x < (TILE_WIDTH * )
+
+        let mut entities = ENTITIES.lock().unwrap();
+
+    }*/
+
+    // struct Entities {
+    //     sprite_map: Vec<u8>,
+    //     e_map: HashMap<u8, (u16, u16, u8, bool)> // x, y, sprite num, render
+    // }
+
+
     // Tile Stuff
 
+    // Entity
+
     // Pixel Stuff
-    #[export_fn]
-    pub fn enable_pixel_layer() {
-        LAYERS.lock().unwrap().allow_pixel_layer = true;
 
-        debug!("ALLOW PIXEL LAYER");
-    }
-
-    #[export_fn]
-    pub fn disable_pixel_layer() {
-        LAYERS.lock().unwrap().allow_pixel_layer = false;
-
-        debug!("DO NOT ALLOW PIXEL LAYER");
-    }
-
+    //TODO Way to bulk draw pixels.
     #[export_fn]
     pub fn draw_pixel(x: u32, y: u32, color: u16) {
         let mut layers = LAYERS.lock().unwrap();
@@ -241,10 +300,9 @@ pub mod commands {
         let buffer = layers.layers.get_mut(AMOUNT_LAYER - 1).unwrap();
 
         let offset = (x * 4) as usize + (y as usize * LAYER_PITCH);
-        let rgba: Vec<u8> = colors::map_color_vec(color)
-            .iter()
-            .map(|val| *val as u8)
-            .collect();
+        let rgba: Vec<u8> = colors::map_color_vec(color);
+
+        // debug!("Gamer: {:?}", rgba);
 
         buffer.splice((offset)..(offset + 4), rgba.iter().cloned());
     }
