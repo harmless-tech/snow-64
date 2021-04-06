@@ -51,6 +51,8 @@ fn init(sdl_context: &Sdl, canvas: &mut WindowCanvas, textures: &mut Vec<Texture
     let mut snow64 = Snow64::new();
     let mut event_pump = sdl_context.event_pump()?;
 
+    canvas.set_viewport(Rect::new(64, 64, 256, 256));
+
     render::commands::toggle_pixel_layer();
     // render::commands::draw_pixel(255, 255, WHITE);
     for x in 0..(256) {
@@ -58,7 +60,7 @@ fn init(sdl_context: &Sdl, canvas: &mut WindowCanvas, textures: &mut Vec<Texture
             render::commands::draw_pixel(x, y, WHITE);
         }
     }
-    // render::draw(canvas, textures);
+    render::draw(canvas, textures);
 
     game_loop(snow64, 60, 0.1, |snow| {
         // Fixed Update
@@ -121,12 +123,12 @@ fn main() -> Result<(), String> {
         .map_err(|e| e.to_string())?;
 
     sdl2::hint::set("SDL_RENDER_SCALE_QUALITY", "nearest");
+    sdl2::hint::set("SDL_RENDER_DRIVER", "vulkan");
     setup_window_icon(&mut window)?;
-
-    let window = window;
 
     info!("Vulkan Init.");
     let _surface = setup_vulkan(&window)?;
+    let window = window;
 
     info!("Renderer Init.");
     let mut canvas = window.into_canvas().build().map_err(|e| e.to_string())?;

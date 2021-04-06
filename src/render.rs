@@ -161,9 +161,10 @@ pub fn draw(canvas: &mut WindowCanvas, textures: &mut Vec<Texture>) -> Result<()
 
     build_textures(textures.borrow_mut())?;
     let viewport= canvas.viewport();
-    // let (width, height) = canvas.window().size();
+    let viewport = Rect::new(i32::abs(viewport.x()), i32::abs(viewport.y()), viewport.width(), viewport.height());
+    debug!("{:?}", viewport);
     for tex in textures.iter() {
-        canvas.copy(&tex, Some(viewport), None /*Some(Rect::new(0, 0, width, height))*/)?;
+        canvas.copy(&tex, Some(viewport), None)?;
     }
 
     canvas.present();
