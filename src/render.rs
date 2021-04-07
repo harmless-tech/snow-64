@@ -1,14 +1,6 @@
 use lazy_static::lazy_static;
-use log::{debug, error};
-use sdl2::{
-    gfx::primitives::DrawRenderer,
-    pixels::{Color, PixelFormatEnum},
-    rect::Rect,
-    render::{BlendMode, Texture, TextureCreator, WindowCanvas},
-    video::WindowContext,
-};
-use std::{borrow::BorrowMut, sync::Mutex};
-use std::collections::HashMap;
+use log::debug;
+use std::{borrow::BorrowMut, collections::HashMap, sync::Mutex};
 
 lazy_static! {
     static ref LAYERS: Mutex<Layers> = Mutex::new(Layers {
@@ -85,7 +77,7 @@ const MAX_ENTITIES: u32 = 256;
 
 struct Entities {
     sprite_map: Vec<u8>,
-    e_map: HashMap<u8, (u16, u16, u8, bool)> // x, y, sprite num, render
+    e_map: HashMap<u8, (u16, u16, u8, bool)>, // x, y, sprite num, render
 }
 
 const TILE_WIDTH: u32 = 16;
@@ -120,85 +112,10 @@ struct FontMap {
     current_map_light: bool,
 }
 
-// All tile maps are loaded before program start.
-// Tiles should be handled in another part of the program.
-// pub fn load_tile_maps(maps: &[&[u8; TILE_MAP_SIZE]; AMOUNT_TILE_MAPS]) {}
-
-// All font maps are loaded before program start.
-// pub fn load_font_maps(light: &[u8; FONT_SIZE], dark: &[u8; FONT_SIZE]) {}
-
-// WARN: This function bypasses a lot of checks!!!
-pub fn load_image_into_layer(layer: usize, img: &[u8], width: usize, height: usize) {
-    if layer < AMOUNT_LAYER {
-        let mut layers = LAYERS.lock().unwrap();
-        let buffer = layers.layers.get_mut(layer).unwrap();
-
-        for i in 0..height {
-            buffer.splice((i * LAYER_WIDTH as usize * 4)..(i * (LAYER_WIDTH as usize) * 4 + width * 4), img[(i * width * 4)..(i * width * 4 + width * 4)].iter().cloned());
-        }
-    }
-    else {
-        error!("load_image_into_layer received a layer value greater then the amount of layers!");
-    }
+pub fn init_textures() {
 }
 
-pub fn init_textures(tex_creator: &TextureCreator<WindowContext>) -> Result<Vec<Texture>, String> {
-    let mut textures = Vec::<Texture>::new();
-    for _i in 0..AMOUNT_LAYER {
-        let mut tex = tex_creator
-            .create_texture_streaming(PixelFormatEnum::RGBA32, LAYER_WIDTH, LAYER_HEIGHT)
-            .map_err(|e| e.to_string())?;
-        tex.set_blend_mode(BlendMode::Blend);
-        textures.push(tex);
-    }
-
-    Ok(textures)
-}
-
-//TODO Allow tiles to be mapped to the buffer.
-pub fn draw(canvas: &mut WindowCanvas, textures: &mut Vec<Texture>) -> Result<(), String> {
-    canvas.clear();
-
-    build_textures(textures.borrow_mut())?;
-    let viewport= canvas.viewport();
-    let viewport = Rect::new(i32::abs(viewport.x()), i32::abs(viewport.y()), viewport.width(), viewport.height());
-    debug!("{:?}", viewport);
-    for tex in textures.iter() {
-        canvas.copy(&tex, Some(viewport), None)?;
-    }
-
-    canvas.present();
-
-    Ok(())
-}
-
-fn build_textures(textures: &mut Vec<Texture>) -> Result<(), String> {
-    if textures.len() == AMOUNT_LAYER {
-        let layers = LAYERS.lock().unwrap();
-
-        for (i, layer) in layers.layers.iter().enumerate() {
-            if LAYER_TYPES[i] != Layer::Pixel || (i == AMOUNT_LAYER - 1 && layers.allow_pixel_layer)
-            {
-                proc_texture(i, textures.borrow_mut(), layer)?;
-            }
-        }
-    }
-    else {
-        return Err("Wrong number of texture layers were passed to the draw function!".to_string());
-    }
-
-    Ok(())
-}
-
-fn proc_texture(index: usize, textures: &mut Vec<Texture>, buffer: &[u8]) -> Result<(), String> {
-    match textures.get_mut(index) {
-        None => return Err("Textures vector is missing a layer!".to_string()),
-        Some(tex) => {
-            tex.update(Rect::from(LAYER_RECT), buffer, LAYER_PITCH)
-                .map_err(|e| e.to_string())?;
-        }
-    }
-
+pub fn draw() -> Result<(), String> {
     Ok(())
 }
 
@@ -282,7 +199,6 @@ pub mod commands {
     //     sprite_map: Vec<u8>,
     //     e_map: HashMap<u8, (u16, u16, u8, bool)> // x, y, sprite num, render
     // }
-
 
     // Tile Stuff
 
