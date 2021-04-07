@@ -17,7 +17,7 @@ license-file = "LICENSE"
 image = "0.23.14"
 log = "0.4.14"
 log4rs = "1.0.0"
-rhai = "0.19.15"
+rhai = { version = "0.19.15", features = ["sync"] }
 lazy_static = "1.4.0"
 bevy = "0.5.0"
 

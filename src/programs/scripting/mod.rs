@@ -1,4 +1,4 @@
-mod rhai_script;
+pub mod rhai_script;
 
 use crate::programs::Program;
 use log::error;

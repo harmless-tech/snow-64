@@ -1,5 +1,5 @@
-mod native;
-mod scripting;
+pub mod native;
+pub mod scripting;
 
 pub enum Program {
     Native(),
@@ -9,3 +9,5 @@ pub enum Program {
     Typescript(),
     RuntimeAssembly(),
 }
+
+//TODO Program plugin here that will handle all other program plugins.

@@ -3,16 +3,26 @@ mod programs;
 mod render;
 mod update;
 
-use bevy::prelude::*;
-use log::{info, warn, error, debug, trace};
+use bevy::{
+    core::FixedTimestep,
+    prelude::*,
+    window::{WindowMode, WindowPlugin, WindowResized},
+};
+use log::{debug, error, info, trace, warn};
+use crate::programs::scripting::rhai_script;
 
-const WIDTH: u32 = 256;
-const HEIGHT: u32 = 256;
+const WIDTH: f32 = 256.0;
+const HEIGHT: f32 = 256.0;
 
 #[cfg(debug_assertions)]
 const DEBUG: bool = true;
 #[cfg(not(debug_assertions))]
 const DEBUG: bool = false;
+
+const FIXED_UPDATE_LABEL: &str = "FIXED_UPDATE_STAGE";
+
+#[derive(Debug, Hash, Eq, PartialEq, Clone, StageLabel)]
+struct FixedUpdateStage;
 
 fn main() -> Result<(), String> {
     let mut args = std::env::args();
@@ -26,7 +36,31 @@ fn main() -> Result<(), String> {
     debug!("Logging Level Debug: TRUE");
     trace!("Logging Level Trace: TRUE");
 
-    App::build().run();
+    App::build()
+        .insert_resource(WindowDescriptor {
+            width: WIDTH,
+            height: HEIGHT,
+            resize_constraints: Default::default(),
+            scale_factor_override: None,
+            title: "Snow64 - alpha build".to_string(),
+            vsync: false,
+            resizable: false,
+            decorations: true,
+            cursor_visible: true,
+            cursor_locked: false,
+            mode: WindowMode::Windowed,
+        })
+        .insert_resource(ClearColor(Color::rgba(0.0, 0.0, 0.0, 1.0)))
+        .add_plugins(DefaultPlugins)
+        .add_stage_after(
+            CoreStage::Update,
+            FixedUpdateStage,
+            SystemStage::parallel().with_run_criteria(
+                FixedTimestep::steps_per_second(60.0).with_label(FIXED_UPDATE_LABEL),
+            ),
+        )
+        .add_plugin(rhai_script::RhaiProgramPlugin)
+        .run();
 
     Ok(())
 }
