@@ -11,12 +11,17 @@ static LOG_PATH: &str = "snow-64-data/snow-64.log";
 
 pub fn setup_log(debug: bool) -> log4rs::Handle {
     // Cleanup
-    let cleanup_log= match remove_file(LOG_PATH) {
+    let cleanup_log = match remove_file(LOG_PATH) {
         Ok(_) => true,
         Err(_) => false,
     };
 
-    let filter = if debug { LevelFilter::Trace } else { LevelFilter::Info };
+    let filter = if debug {
+        LevelFilter::Trace
+    }
+    else {
+        LevelFilter::Info
+    };
 
     // Setup
     let stdout: ConsoleAppender = ConsoleAppender::builder()

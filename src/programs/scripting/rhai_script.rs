@@ -1,4 +1,4 @@
-use log::{debug, info};
+use log::debug;
 use rhai::{plugin::*, Engine, Module, OptimizationLevel, Scope};
 use std::rc::Rc;
 
