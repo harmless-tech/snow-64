@@ -112,8 +112,7 @@ struct FontMap {
     current_map_light: bool,
 }
 
-pub fn init_textures() {
-}
+pub fn init_textures() {}
 
 pub fn draw() -> Result<(), String> {
     Ok(())
