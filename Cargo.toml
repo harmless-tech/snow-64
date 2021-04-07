@@ -18,10 +18,11 @@ image = "0.23.14"
 log = "0.4.14"
 log4rs = "1.0.0"
 rhai = "0.19.15"
-game-loop = "0.7.3"
 lazy_static = "1.4.0"
-rand = "0.8.3"
+#rand = "0.8.3"
 macroquad = "0.3.0-alpha.17"
+configparser = "2.0.0"
+game-loop = "0.7.3"
 
 [profile.release]
 opt-level = 3

@@ -1,6 +1,8 @@
 use lazy_static::lazy_static;
 use log::debug;
 use std::{collections::HashMap, sync::Mutex};
+use macroquad::prelude::*;
+use image::EncodableLayout;
 
 lazy_static! {
     static ref LAYERS: Mutex<Layers> = Mutex::new(Layers {
@@ -61,7 +63,7 @@ enum Layer {
 }
 
 struct Layers {
-    layers: [Vec<u8>; AMOUNT_LAYER], // Pixel, Text, Entity (1), Tile (1), Entity (0), Tile (0).
+    layers: [Vec<u8>; AMOUNT_LAYER], // Pixel, Text, Entity (1), Tile (1), Entity (0), Tile (0). (This is reversed in the array!)
     current_entity_layer: u32,
     current_tile_layer: u32,
     allow_pixel_layer: bool,
@@ -112,7 +114,55 @@ struct FontMap {
     current_map_light: bool,
 }
 
-// macro draw
+pub fn init_textures() -> Vec<Texture2D> {
+    let mut textures = Vec::with_capacity(AMOUNT_LAYER);
+
+    let layers = LAYERS.lock().unwrap();
+    for layer in layers.layers.iter() {
+        let tex = load_texture_from_image(&Image {
+            bytes: layer.clone(),
+            width: LAYER_WIDTH as u16,
+            height: LAYER_HEIGHT as u16,
+        });
+        set_texture_filter(tex, FilterMode::Nearest);
+
+        textures.push(tex);
+    }
+
+    textures
+}
+
+pub fn draw(textures: &mut Vec<Texture2D>, params: &DrawTextureParams) { //TODO Return?
+    let layers = LAYERS.lock().unwrap();
+
+    for layer in layers.layers.iter() {
+        let tex = textures.pop().unwrap();
+
+        update_texture(tex, &Image {
+            bytes: layer.clone(),
+            width: LAYER_WIDTH as u16,
+            height: LAYER_HEIGHT as u16
+        });
+
+        draw_texture_ex(tex, 0.0, 0.0, WHITE, params.clone());
+
+        textures.push(tex);
+    }
+}
+// fn make_texture(index: usize) -> Texture2D {
+//     let layer = LAYERS.lock().unwrap();
+//     let lay = layer.layers.;
+//
+//     let tex = load_texture_from_image(&Image {
+//         bytes: lay.clone(),
+//         width: 0,
+//         height: 0
+//     });
+// }
+
+pub fn load_sprite_map() {}
+pub fn load_tile_maps() {}
+pub fn load_fonts() {}
 
 pub mod colors {
     pub const WHITE: u16 = create_color(15, 15, 15, 15);
@@ -180,6 +230,15 @@ pub mod commands {
 
         layers.allow_pixel_layer
     }
+
+    // Entities
+    // Tiles
+    // Font
+
+
+
+
+
 
     // Entities
     /*#[export_fn]
