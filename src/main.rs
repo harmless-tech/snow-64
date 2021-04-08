@@ -1,15 +1,17 @@
 mod logging;
-mod model;
 mod texture;
 
+use anyhow::*;
 use cgmath::prelude::*;
 use futures::executor::block_on;
 use image::GenericImageView;
 use log::{debug, error, info, trace, warn};
 use wgpu::{util::DeviceExt, BufferAddress};
 use winit::{
+    dpi,
     event::*,
     event_loop::{ControlFlow, EventLoop},
+    window,
     window::{Window, WindowBuilder},
 };
 
@@ -18,8 +20,8 @@ use winit::{
 // Scale camera to the position on the texture.
 // Allow alpha textures to be stacked on top of one another.
 
-const WIDTH: u32 = 256;
-const HEIGHT: u32 = 256;
+const WIDTH: u32 = 1024; //TODO Set back to 256.
+const HEIGHT: u32 = 1024; //TODO Set back to 256.
 
 #[cfg(debug_assertions)]
 const DEBUG: bool = true;
@@ -221,10 +223,10 @@ impl WState {
         });
 
         let camera = Camera {
-            eye: (0.0, 1.0, 2.0).into(),
+            eye: (0.0, 0.0, 2.0).into(),
             target: (0.0, 0.0, 0.0).into(),
             up: cgmath::Vector3::unit_y(),
-            aspect: sc_desc.width as f32 / sc_desc.height as f32,
+            aspect: 1.0, /*sc_desc.width as f32 / sc_desc.height as f32*/
             fovy: 45.0,
             znear: 0.1,
             zfar: 100.0,
@@ -425,13 +427,8 @@ impl WState {
             render_pass.set_bind_group(0, &self.diffuse_bind_group, &[]);
             render_pass.set_bind_group(1, &self.uniform_bind_group, &[]);
             render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
-            // render_pass.set_vertex_buffer(1, self.instance_buffer.slice(..));
             render_pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
-            render_pass.draw_indexed(
-                0..self.num_indices,
-                0,
-                0..1, /*self.instances.len() as _*/
-            );
+            render_pass.draw_indexed(0..self.num_indices, 0, 0..1);
         }
 
         self.queue.submit(std::iter::once(encoder.finish()));
@@ -441,11 +438,11 @@ impl WState {
 }
 
 //TODO Config.ini
-fn main() -> Result<(), String> {
+fn main() -> Result<()> {
     let mut args = std::env::args();
     let debug = DEBUG || args.any(|s| s.eq("--debug"));
 
-    let _logging = logging::setup_log(debug);
+    let _logging = logging::setup_log(debug)?;
     info!("Logging Check!");
     info!("Logging Level Info: TRUE");
     warn!("Logging Level Warn: TRUE");
@@ -454,7 +451,13 @@ fn main() -> Result<(), String> {
     trace!("Logging Level Trace: TRUE");
 
     let event_loop = EventLoop::new();
-    let window = WindowBuilder::new().build(&event_loop).unwrap();
+    let window = WindowBuilder::new()
+        .with_min_inner_size(dpi::Size::Physical(dpi::PhysicalSize::new(WIDTH, HEIGHT)))
+        .with_inner_size(dpi::Size::Physical(dpi::PhysicalSize::new(WIDTH, HEIGHT)))
+        .with_window_icon(Some(create_window_icon()?))
+        .with_title("Snow64 - alpha build")
+        .build(&event_loop)
+        .unwrap();
 
     let mut state = block_on(WState::new(&window));
 
@@ -474,7 +477,19 @@ fn main() -> Result<(), String> {
                         } => *control_flow = ControlFlow::Exit,
                         _ => {}
                     },
-                    WindowEvent::Resized(size) => state.resize(*size),
+                    WindowEvent::Resized(size) => {
+                        //TODO This is fine for now. Should be greatly improved in future.
+
+                        if size.width == size.height {
+                            state.resize(*size);
+                        }
+                        else {
+                            let max = size.width.max(size.height);
+                            window.set_inner_size(dpi::Size::Physical(dpi::PhysicalSize::new(
+                                max, max,
+                            )));
+                        }
+                    }
                     WindowEvent::ScaleFactorChanged { new_inner_size, .. } => {
                         state.resize(**new_inner_size)
                     }
@@ -496,6 +511,15 @@ fn main() -> Result<(), String> {
     });
 
     Ok(())
+}
+
+fn create_window_icon() -> Result<window::Icon> {
+    let bytes = include_bytes!("./assets/icon-512.png");
+    let img = image::load_from_memory_with_format(bytes, image::ImageFormat::Png)?;
+    let rgba = img.as_rgba8().unwrap();
+    let dimensions = img.dimensions();
+    window::Icon::from_rgba(rgba.clone().into_vec(), dimensions.0, dimensions.1)
+        .context("Failed to create window icon!")
 }
 
 // FROM: https://sotrh.github.io/learn-wgpu/beginner/tutorial6-uniforms/#a-controller-for-our-camera

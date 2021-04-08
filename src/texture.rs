@@ -15,8 +15,8 @@ impl Texture {
         bytes: &[u8],
         label: &str,
     ) -> Result<Self> {
-        let img = image::load_from_memory(bytes)?;
-        Self::from_image(device, queue, &img, Some(label))
+        let img = image::load_from_memory_with_format(bytes, image::ImageFormat::Png)?;
+        Ok(Self::from_image(device, queue, &img, Some(label)))
     }
 
     pub fn from_image(
@@ -24,7 +24,7 @@ impl Texture {
         queue: &wgpu::Queue,
         img: &image::DynamicImage,
         label: Option<&str>,
-    ) -> Result<Self> {
+    ) -> Self {
         let rgba = img.as_rgba8().unwrap();
         let dimensions = img.dimensions();
 
@@ -69,11 +69,11 @@ impl Texture {
             ..Default::default()
         });
 
-        Ok(Self {
+        Self {
             texture,
             view,
             sampler,
-        })
+        }
     }
 
     pub fn create_depth_texture(

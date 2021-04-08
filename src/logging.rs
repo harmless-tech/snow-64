@@ -1,3 +1,4 @@
+use anyhow::*;
 use log::{info, warn, LevelFilter};
 use log4rs::{
     append::{console::ConsoleAppender, file::FileAppender},
@@ -9,7 +10,7 @@ use std::fs::remove_file;
 //TODO Allow for log path to be changed?
 static LOG_PATH: &str = "snow-64-data/snow-64.log";
 
-pub fn setup_log(debug: bool) -> log4rs::Handle {
+pub fn setup_log(debug: bool) -> Result<log4rs::Handle> {
     // Cleanup
     let cleanup_log = match remove_file(LOG_PATH) {
         Ok(_) => true,
@@ -52,10 +53,9 @@ pub fn setup_log(debug: bool) -> log4rs::Handle {
                 .appender("stdout")
                 .appender("fileout")
                 .build(filter),
-        )
-        .unwrap();
+        )?;
 
-    let handle: log4rs::Handle = log4rs::init_config(config).unwrap();
+    let handle: log4rs::Handle = log4rs::init_config(config)?;
 
     if cleanup_log {
         info!("Previous log file deleted.")
@@ -64,5 +64,5 @@ pub fn setup_log(debug: bool) -> log4rs::Handle {
         warn!("Previous log file could not be deleted. This could become a problem if the log file gets very long.")
     }
 
-    return handle;
+    return Ok(handle);
 }
