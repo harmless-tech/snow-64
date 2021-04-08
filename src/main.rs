@@ -10,6 +10,7 @@ use bevy::{
 };
 use log::{debug, error, info, trace, warn};
 use crate::programs::scripting::rhai_script;
+use bevy::diagnostic::FrameTimeDiagnosticsPlugin;
 
 const WIDTH: f32 = 256.0;
 const HEIGHT: f32 = 256.0;
@@ -52,6 +53,7 @@ fn main() -> Result<(), String> {
         })
         .insert_resource(ClearColor(Color::rgba(0.0, 0.0, 0.0, 1.0)))
         .add_plugins(DefaultPlugins)
+        .add_plugin(FrameTimeDiagnosticsPlugin::default())
         .add_stage_after(
             CoreStage::Update,
             FixedUpdateStage,
@@ -63,4 +65,12 @@ fn main() -> Result<(), String> {
         .run();
 
     Ok(())
+}
+
+fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
+    commands.spawn().insert_bundle(OrthographicCameraBundle::new_2d());
+
+    SpriteBundle {
+
+    }
 }

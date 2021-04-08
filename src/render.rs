@@ -1,41 +1,42 @@
 use lazy_static::lazy_static;
 use log::debug;
 use std::{borrow::BorrowMut, collections::HashMap, sync::Mutex};
+use bevy::prelude::*;
 
-lazy_static! {
-    static ref LAYERS: Mutex<Layers> = Mutex::new(Layers {
-        layers: [
-            vec![0_u8; LAYER_SIZE],
-            vec![0_u8; LAYER_SIZE],
-            vec![0_u8; LAYER_SIZE],
-            vec![0_u8; LAYER_SIZE],
-            vec![0_u8; LAYER_SIZE],
-            vec![0_u8; LAYER_SIZE]
-        ],
-        current_entity_layer: 0,
-        current_tile_layer: 0,
-        allow_pixel_layer: false,
-    });
-    static ref ENTITIES: Mutex<Entities> = Mutex::new(Entities {
-        sprite_map: vec![0_u8; SPRITE_MAP_SIZE],
-        e_map: HashMap::with_capacity(MAX_ENTITIES as usize),
-    });
-    static ref TILE_MAPS: Mutex<TileMaps> = Mutex::new(TileMaps {
-        tile_maps: [
-            vec![0_u8; TILE_MAP_SIZE],
-            vec![0_u8; TILE_MAP_SIZE],
-            vec![0_u8; TILE_MAP_SIZE],
-            vec![0_u8; TILE_MAP_SIZE]
-        ],
-        current_map: 0,
-        current_tile: 0,
-    });
-    static ref FONT_MAP: Mutex<FontMap> = Mutex::new(FontMap {
-        font_map_light: vec![0_u8; FONT_SIZE],
-        font_map_dark: vec![0_u8; FONT_SIZE],
-        current_map_light: true,
-    });
-}
+// lazy_static! {
+//     static ref LAYERS: Mutex<Layers> = Mutex::new(Layers {
+//         layers: [
+//             vec![0_u8; LAYER_SIZE],
+//             vec![0_u8; LAYER_SIZE],
+//             vec![0_u8; LAYER_SIZE],
+//             vec![0_u8; LAYER_SIZE],
+//             vec![0_u8; LAYER_SIZE],
+//             vec![0_u8; LAYER_SIZE]
+//         ],
+//         current_entity_layer: 0,
+//         current_tile_layer: 0,
+//         allow_pixel_layer: false,
+//     });
+//     static ref ENTITIES: Mutex<Entities> = Mutex::new(Entities {
+//         sprite_map: vec![0_u8; SPRITE_MAP_SIZE],
+//         e_map: HashMap::with_capacity(MAX_ENTITIES as usize),
+//     });
+//     static ref TILE_MAPS: Mutex<TileMaps> = Mutex::new(TileMaps {
+//         tile_maps: [
+//             vec![0_u8; TILE_MAP_SIZE],
+//             vec![0_u8; TILE_MAP_SIZE],
+//             vec![0_u8; TILE_MAP_SIZE],
+//             vec![0_u8; TILE_MAP_SIZE]
+//         ],
+//         current_map: 0,
+//         current_tile: 0,
+//     });
+//     static ref FONT_MAP: Mutex<FontMap> = Mutex::new(FontMap {
+//         font_map_light: vec![0_u8; FONT_SIZE],
+//         font_map_dark: vec![0_u8; FONT_SIZE],
+//         current_map_light: true,
+//     });
+// }
 
 const LAYER_WIDTH: u32 = 512 * TILE_WIDTH;
 const LAYER_HEIGHT: u32 = 256 * TILE_HEIGHT;
@@ -110,6 +111,10 @@ struct FontMap {
     font_map_light: Vec<u8>,
     font_map_dark: Vec<u8>,
     current_map_light: bool,
+}
+
+pub fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
+    let textures =
 }
 
 pub mod colors {
