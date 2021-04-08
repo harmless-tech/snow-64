@@ -3,5 +3,8 @@
 
 /target
 
-*.log
+*.oxi
 *.spv
+
+/snow64-data
+*.log

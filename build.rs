@@ -1,9 +1,7 @@
 use anyhow::*;
-use fs_extra::{copy_items, dir::CopyOptions};
 use glob::glob;
 use rayon::prelude::*;
 use std::{
-    env,
     fs::{read_to_string, write},
     path::PathBuf,
 };
@@ -40,6 +38,27 @@ impl ShaderData {
     }
 }
 
+struct ImageData {
+    src_path: PathBuf,
+    oxi_path: PathBuf,
+}
+impl ImageData {
+    pub fn load(src_path: PathBuf) -> Result<Self> {
+        let ext = src_path
+            .extension()
+            .context("File has no extension.")?
+            .to_str()
+            .context("Cannot convert path to &str.")?;
+
+        let oxi_path = src_path.with_extension(format!("{}.oxi", ext));
+
+        Ok(Self {
+            src_path,
+            oxi_path,
+        })
+    }
+}
+
 fn main() -> Result<()> {
     let mut shader_paths = Vec::new();
     shader_paths.extend(glob("./src/**/*.vert")?);
@@ -71,14 +90,35 @@ fn main() -> Result<()> {
         write(shader.spv_path, compiled.as_binary_u8())?;
     }
 
-    println!("cargo:rerun-if-changed=res/*");
+    let mut image_paths = Vec::new();
+    image_paths.extend(glob("./src/**/*.png")?);
 
-    let out_dir = env::var("OUT_DIR")?;
-    let mut copy_options = CopyOptions::new();
-    copy_options.overwrite = true;
-    let mut paths_to_copy = Vec::new();
-    paths_to_copy.push("res/");
-    copy_items(&paths_to_copy, out_dir, &copy_options)?;
+    let images = image_paths
+        .into_par_iter()
+        .map(|g| ImageData::load(g?))
+        .collect::<Vec<Result<_>>>()
+        .into_iter()
+        .collect::<Result<Vec<_>>>()?;
+
+    let image_options = oxipng::Options::max_compression();
+
+    for image in images {
+        println!(
+            "cargo:rerun-if-changed={}",
+            image.src_path.as_os_str().to_str().unwrap()
+        );
+
+        oxipng::optimize(&oxipng::InFile::Path(image.src_path), &oxipng::OutFile::Path(Some(image.oxi_path)), &image_options)?;
+    }
+
+    // println!("cargo:rerun-if-changed=res/*");
+    //
+    // let out_dir = env::var("OUT_DIR")?;
+    // let mut copy_options = CopyOptions::new();
+    // copy_options.overwrite = true;
+    // let mut paths_to_copy = Vec::new();
+    // paths_to_copy.push("res/");
+    // copy_items(&paths_to_copy, out_dir, &copy_options)?;
 
     Ok(())
 }

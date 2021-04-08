@@ -8,7 +8,7 @@ use log4rs::{
 use std::fs::remove_file;
 
 //TODO Allow for log path to be changed?
-static LOG_PATH: &str = "snow-64-data/snow-64.log";
+static LOG_PATH: &str = "snow64-data/snow-64.log";
 
 pub fn setup_log(debug: bool) -> Result<log4rs::Handle> {
     // Cleanup

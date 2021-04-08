@@ -6,7 +6,7 @@ use cgmath::prelude::*;
 use futures::executor::block_on;
 use image::GenericImageView;
 use log::{debug, error, info, trace, warn};
-use wgpu::{util::DeviceExt, BufferAddress};
+use wgpu::{util::DeviceExt};
 use winit::{
     dpi,
     event::*,
@@ -178,7 +178,7 @@ impl WState {
 
         let clear_color = wgpu::Color::BLACK;
 
-        let diffuse_bytes = include_bytes!("./assets/icon-256.png");
+        let diffuse_bytes = include_bytes!("./assets/icons/icon-256.png");
         let diffuse_texture =
             texture::Texture::from_bytes(&device, &queue, diffuse_bytes, "icon-256.png").unwrap();
 
@@ -510,11 +510,11 @@ fn main() -> Result<()> {
         _ => {}
     });
 
-    Ok(())
+    //Ok(())
 }
 
 fn create_window_icon() -> Result<window::Icon> {
-    let bytes = include_bytes!("./assets/icon-512.png");
+    let bytes = include_bytes!("./assets/icons/icon-512.png");
     let img = image::load_from_memory_with_format(bytes, image::ImageFormat::Png)?;
     let rgba = img.as_rgba8().unwrap();
     let dimensions = img.dimensions();
@@ -590,7 +590,6 @@ impl CameraController {
     }
 
     fn update_camera(&self, camera: &mut Camera) {
-        use cgmath::InnerSpace;
         let forward = camera.target - camera.eye;
         let forward_norm = forward.normalize();
         let forward_mag = forward.magnitude();
