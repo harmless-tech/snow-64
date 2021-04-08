@@ -313,6 +313,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3d7b894f5411737b7867f4827955924d7c254fc9f4d91a6aad6b097804b1018b"
 
 [[package]]
+name = "configparser"
+version = "2.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e2616d8c1fbf887d76dd8e067ec1bc3be7669994378428b4415a8e4ad57baae1"
+
+[[package]]
 name = "copyless"
 version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1953,6 +1959,7 @@ dependencies = [
  "anyhow",
  "bytemuck",
  "cgmath",
+ "configparser",
  "fs_extra",
  "futures",
  "glob",

@@ -44,18 +44,18 @@ struct ImageData {
 }
 impl ImageData {
     pub fn load(src_path: PathBuf) -> Result<Self> {
-        let ext = src_path
+        let _ext = src_path
             .extension()
             .context("File has no extension.")?
             .to_str()
             .context("Cannot convert path to &str.")?;
 
-        let oxi_path = src_path.with_extension(format!("{}.oxi", ext));
+        let s = src_path.as_os_str().to_str().unwrap();
+        let path = &s[..(s.len() - 4)];
 
-        Ok(Self {
-            src_path,
-            oxi_path,
-        })
+        let oxi_path = PathBuf::from(format!("{}.oxi.png", path));
+
+        Ok(Self { src_path, oxi_path })
     }
 }
 
@@ -100,15 +100,29 @@ fn main() -> Result<()> {
         .into_iter()
         .collect::<Result<Vec<_>>>()?;
 
-    let image_options = oxipng::Options::max_compression();
+    let mut image_options = oxipng::Options::max_compression();
+    image_options.color_type_reduction = false;
 
     for image in images {
-        println!(
-            "cargo:rerun-if-changed={}",
-            image.src_path.as_os_str().to_str().unwrap()
-        );
+        if !image
+            .src_path
+            .as_os_str()
+            .to_str()
+            .unwrap()
+            .ends_with(".oxi.png")
+        {
+            println!(
+                "cargo:rerun-if-changed={}",
+                image.src_path.as_os_str().to_str().unwrap()
+            );
 
-        oxipng::optimize(&oxipng::InFile::Path(image.src_path), &oxipng::OutFile::Path(Some(image.oxi_path)), &image_options)?;
+            //TODO Should the image be replaced in the future?
+            oxipng::optimize(
+                &oxipng::InFile::Path(image.src_path),
+                &oxipng::OutFile::Path(Some(image.oxi_path)),
+                &image_options,
+            )?;
+        }
     }
 
     // println!("cargo:rerun-if-changed=res/*");

@@ -3,10 +3,11 @@ mod texture;
 
 use anyhow::*;
 use cgmath::prelude::*;
+use configparser::ini;
 use futures::executor::block_on;
 use image::GenericImageView;
 use log::{debug, error, info, trace, warn};
-use wgpu::{util::DeviceExt};
+use wgpu::util::DeviceExt;
 use winit::{
     dpi,
     event::*,
@@ -15,18 +16,19 @@ use winit::{
     window::{Window, WindowBuilder},
 };
 
+//TODO Clean!!!
+
 // Planning
 // Render textures on top of one another.
 // Scale camera to the position on the texture.
 // Allow alpha textures to be stacked on top of one another.
 
-const WIDTH: u32 = 1024; //TODO Set back to 256.
-const HEIGHT: u32 = 1024; //TODO Set back to 256.
+const DISPLAY_RES: u32 = 256;
 
 #[cfg(debug_assertions)]
-const DEBUG: bool = true;
+const DEBUG_BUILD: bool = true;
 #[cfg(not(debug_assertions))]
-const DEBUG: bool = false;
+const DEBUG_BUILD: bool = false;
 
 const VERTICES: &[Vertex] = &[
     Vertex {
@@ -48,6 +50,21 @@ const VERTICES: &[Vertex] = &[
 ];
 
 const INDICES: &[u16] = &[0, 1, 2, 2, 3, 0];
+
+struct Snow;
+
+struct SnowConfig {
+    display_res: u32,
+    dev_debug: bool,
+}
+impl Default for SnowConfig {
+    fn default() -> Self {
+        Self {
+            display_res: DISPLAY_RES,
+            dev_debug: DEBUG_BUILD,
+        }
+    }
+}
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
@@ -178,9 +195,9 @@ impl WState {
 
         let clear_color = wgpu::Color::BLACK;
 
-        let diffuse_bytes = include_bytes!("./assets/icons/icon-256.png");
+        let diffuse_bytes = include_bytes!("./assets/icons/icon-512.oxi.png");
         let diffuse_texture =
-            texture::Texture::from_bytes(&device, &queue, diffuse_bytes, "icon-256.png").unwrap();
+            texture::Texture::from_bytes(&device, &queue, diffuse_bytes, "icon-512.png").unwrap();
 
         let texture_bind_group_layout =
             device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
@@ -439,8 +456,10 @@ impl WState {
 
 //TODO Config.ini
 fn main() -> Result<()> {
+    let config = load_config()?;
     let mut args = std::env::args();
-    let debug = DEBUG || args.any(|s| s.eq("--debug"));
+
+    let debug = DEBUG_BUILD || args.any(|s| s.eq("--debug")) || config.dev_debug;
 
     let _logging = logging::setup_log(debug)?;
     info!("Logging Check!");
@@ -452,8 +471,14 @@ fn main() -> Result<()> {
 
     let event_loop = EventLoop::new();
     let window = WindowBuilder::new()
-        .with_min_inner_size(dpi::Size::Physical(dpi::PhysicalSize::new(WIDTH, HEIGHT)))
-        .with_inner_size(dpi::Size::Physical(dpi::PhysicalSize::new(WIDTH, HEIGHT)))
+        .with_min_inner_size(dpi::Size::Physical(dpi::PhysicalSize::new(
+            config.display_res,
+            config.display_res,
+        )))
+        .with_inner_size(dpi::Size::Physical(dpi::PhysicalSize::new(
+            config.display_res,
+            config.display_res,
+        )))
         .with_window_icon(Some(create_window_icon()?))
         .with_title("Snow64 - alpha build")
         .build(&event_loop)
@@ -509,15 +534,42 @@ fn main() -> Result<()> {
         Event::MainEventsCleared => window.request_redraw(),
         _ => {}
     });
+}
 
-    //Ok(())
+fn load_config() -> Result<SnowConfig> {
+    let mut config = SnowConfig::default();
+
+    let file = std::fs::read_to_string("./snow64-data/config.ini").unwrap_or("".to_string());
+    if !file.is_empty() {
+        let mut parser = ini::Ini::new();
+        parser.read(file).map_err(|e| Error::msg(e))?;
+
+        match parser
+            .getuint("display", "res")
+            .map_err(|e| Error::msg(e))?
+        {
+            None => {}
+            Some(val) => {
+                if val as u32 >= DISPLAY_RES {
+                    config.display_res = val as u32;
+                }
+            }
+        }
+        match parser.getbool("dev", "debug").map_err(|e| Error::msg(e))? {
+            None => {}
+            Some(val) => config.dev_debug = val,
+        }
+    }
+
+    Ok(config)
 }
 
 fn create_window_icon() -> Result<window::Icon> {
-    let bytes = include_bytes!("./assets/icons/icon-512.png");
+    let bytes = include_bytes!("./assets/icons/icon-512.oxi.png");
     let img = image::load_from_memory_with_format(bytes, image::ImageFormat::Png)?;
     let rgba = img.as_rgba8().unwrap();
     let dimensions = img.dimensions();
+
     window::Icon::from_rgba(rgba.clone().into_vec(), dimensions.0, dimensions.1)
         .context("Failed to create window icon!")
 }

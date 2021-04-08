@@ -4,6 +4,7 @@
 /target
 
 *.oxi
+*.oxi.png
 *.spv
 
 /snow64-data
