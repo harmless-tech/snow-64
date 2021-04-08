@@ -5,12 +5,13 @@ mod update;
 
 use futures::executor::block_on;
 use log::{debug, error, info, trace, warn};
+use wgpu::util::DeviceExt;
 use winit::{
     event::*,
     event_loop::{ControlFlow, EventLoop},
     window::{Window, WindowBuilder},
 };
-use wgpu::util::DeviceExt;
+use image::GenericImageView;
 
 const WIDTH: u32 = 256;
 const HEIGHT: u32 = 256;
@@ -24,24 +25,41 @@ const DEBUG: bool = false;
 #[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
 struct Vertex {
     position: [f32; 3],
-    color: [f32; 3],
+    tex_coords: [f32; 2],
 }
-unsafe impl bytemuck::Pod for Vertex {}
-unsafe impl bytemuck::Zeroable for Vertex {}
+impl Vertex {
+    fn desc<'a>() -> wgpu::VertexBufferLayout<'a> {
+        wgpu::VertexBufferLayout {
+            array_stride: std::mem::size_of::<Vertex>() as wgpu::BufferAddress,
+            step_mode: wgpu::InputStepMode::Vertex,
+            attributes: &[
+                wgpu::VertexAttribute {
+                    format: wgpu::VertexFormat::Float3,
+                    offset: 0,
+                    shader_location: 0,
+                },
+                wgpu::VertexAttribute {
+                    format: wgpu::VertexFormat::Float2,
+                    offset: std::mem::size_of::<[f32; 3]>() as wgpu::BufferAddress,
+                    shader_location: 1,
+                },
+            ],
+        }
+    }
+}
 
 const VERTICES: &[Vertex] = &[
-    Vertex {
-        position: [0.0, 0.5, 0.0],
-        color: [1.0, 0.0, 0.0],
-    },
-    Vertex {
-        position: [-0.5, -0.5, 0.0],
-        color: [0.0, 1.0, 0.0],
-    },
-    Vertex {
-        position: [0.5, -0.5, 0.0],
-        color: [0.0, 0.0, 1.0],
-    },
+    Vertex { position: [-0.0868241, 0.49240386, 0.0], tex_coords: [0.4131759, 0.00759614], }, // A
+    Vertex { position: [-0.49513406, 0.06958647, 0.0], tex_coords: [0.0048659444, 0.43041354], }, // B
+    Vertex { position: [-0.21918549, -0.44939706, 0.0], tex_coords: [0.28081453, 0.949397057], }, // C
+    Vertex { position: [0.35966998, -0.3473291, 0.0], tex_coords: [0.85967, 0.84732911], }, // D
+    Vertex { position: [0.44147372, 0.2347359, 0.0], tex_coords: [0.9414737, 0.2652641], }, // E
+];
+
+const INDICES: &[u16] = &[
+    0, 1, 4,
+    1, 2, 4,
+    2, 3, 4
 ];
 
 struct WState {
@@ -54,6 +72,10 @@ struct WState {
     clear_color: wgpu::Color,
     render_pipeline: wgpu::RenderPipeline,
     vertex_buffer: wgpu::Buffer,
+    num_vertices: u32,
+    index_buffer: wgpu::Buffer,
+    num_indices: u32,
+    diffuse_bind_group: wgpu::BindGroup
 }
 impl WState {
     async fn new(window: &Window) -> Self {
@@ -92,6 +114,82 @@ impl WState {
 
         let clear_color = wgpu::Color::BLACK;
 
+        let diffuse_bytes = include_bytes!("./assets/NOPUSH-happy-tree.png");
+        let diffuse_image = image::load_from_memory(diffuse_bytes).unwrap();
+        let diffuse_rgba = diffuse_image.as_rgba8().unwrap();
+
+        use image::GenericImageView;
+        let dimensions = diffuse_image.dimensions();
+
+        let texture_size = wgpu::Extent3d {
+            width: dimensions.0,
+            height: dimensions.1,
+            depth: 1,
+        };
+        let diffuse_texture = device.create_texture(&wgpu::TextureDescriptor {
+            label: Some("Diffuse Texture"),
+            size: texture_size,
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: wgpu::TextureDimension::D2,
+            format: wgpu::TextureFormat::Rgba8UnormSrgb,
+            usage: wgpu::TextureUsage::SAMPLED | wgpu::TextureUsage::COPY_DST,
+        });
+
+        queue.write_texture(wgpu::TextureCopyView {
+            texture: &diffuse_texture,
+            mip_level: 0,
+            origin: wgpu::Origin3d::ZERO,
+        }, diffuse_rgba, wgpu::TextureDataLayout {
+            offset: 0,
+            bytes_per_row: 4 * dimensions.0,
+            rows_per_image: dimensions.1,
+        }, texture_size);
+
+        let diffuse_texture_view = diffuse_texture.create_view(&wgpu::TextureViewDescriptor::default());
+        let diffuse_sampler = device.create_sampler(&wgpu::SamplerDescriptor {
+            address_mode_u: wgpu::AddressMode::ClampToEdge,
+            address_mode_v: wgpu::AddressMode::ClampToEdge,
+            address_mode_w: wgpu::AddressMode::ClampToEdge,
+            mag_filter: wgpu::FilterMode::Linear,
+            min_filter: wgpu::FilterMode::Nearest,
+            mipmap_filter: wgpu::FilterMode::Nearest,
+            ..Default::default()
+        });
+
+        let texture_bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            label: Some("Texture Bind Group Layout"),
+            entries: &[
+                wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStage::FRAGMENT,
+                    ty: wgpu::BindingType::Texture {
+                        sample_type: wgpu::TextureSampleType::Float { filterable: false },
+                        view_dimension: wgpu::TextureViewDimension::D2,
+                        multisampled: false
+                    },
+                    count: None
+                },
+                wgpu::BindGroupLayoutEntry {
+                    binding: 1,
+                    visibility: wgpu::ShaderStage::FRAGMENT,
+                    ty: wgpu::BindingType::Sampler {
+                        filtering: true,
+                        comparison: false
+                    },
+                    count: None
+                }
+            ]
+        });
+        let diffuse_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("Diffuse Bind Group"),
+            layout: &texture_bind_group_layout,
+            entries: &[
+                wgpu::BindGroupEntry { binding: 0, resource: wgpu::BindingResource::TextureView(&diffuse_texture_view) },
+                wgpu::BindGroupEntry { binding: 1, resource: wgpu::BindingResource::Sampler(&diffuse_sampler) }
+            ]
+        });
+
         let vs_module =
             device.create_shader_module(&wgpu::include_spirv!("./assets/shaders/shader.vert.spv"));
         let fs_module =
@@ -99,7 +197,7 @@ impl WState {
         let render_pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Render Pipeline Layout"),
-                bind_group_layouts: &[],
+                bind_group_layouts: &[&texture_bind_group_layout],
                 push_constant_ranges: &[],
             });
         let render_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
@@ -108,7 +206,7 @@ impl WState {
             vertex: wgpu::VertexState {
                 module: &vs_module,
                 entry_point: "main",
-                buffers: &[],
+                buffers: &[Vertex::desc()],
             },
             fragment: Some(wgpu::FragmentState {
                 module: &fs_module,
@@ -140,6 +238,14 @@ impl WState {
             contents: bytemuck::cast_slice(VERTICES),
             usage: wgpu::BufferUsage::VERTEX,
         });
+        let num_vertices = VERTICES.len() as u32;
+
+        let index_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("Index Buffer"),
+            contents: bytemuck::cast_slice(INDICES),
+            usage: wgpu::BufferUsage::INDEX
+        });
+        let num_indices = INDICES.len() as u32;
 
         Self {
             surface,
@@ -151,6 +257,10 @@ impl WState {
             clear_color,
             render_pipeline,
             vertex_buffer,
+            num_vertices,
+            index_buffer,
+            num_indices,
+            diffuse_bind_group,
         }
     }
 
@@ -203,7 +313,10 @@ impl WState {
             });
 
             render_pass.set_pipeline(&self.render_pipeline);
-            render_pass.draw(0..3, 0..1);
+            render_pass.set_bind_group(0, &self.diffuse_bind_group, &[]);
+            render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
+            render_pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
+            render_pass.draw_indexed(0..self.num_indices, 0, 0..1);
         }
 
         self.queue.submit(std::iter::once(encoder.finish()));
