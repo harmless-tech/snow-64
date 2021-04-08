@@ -1,10 +1,10 @@
 use anyhow::*;
 use glob::glob;
+use rayon::prelude::*;
 use std::{
     fs::{read_to_string, write},
     path::PathBuf,
 };
-use rayon::prelude::*;
 
 struct ShaderData {
     src: String,
@@ -44,7 +44,8 @@ fn main() -> Result<()> {
     shader_paths.extend(glob("./src/**/*.frag")?);
     shader_paths.extend(glob("./src/**/*.comp")?);
 
-    let shaders = shader_paths.into_par_iter()
+    let shaders = shader_paths
+        .into_par_iter()
         .map(|g| ShaderData::load(g?))
         .collect::<Vec<Result<_>>>()
         .into_iter()
