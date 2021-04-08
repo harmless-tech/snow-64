@@ -2,7 +2,6 @@ mod logging;
 mod model;
 mod texture;
 
-use crate::model::Vertex;
 use cgmath::prelude::*;
 use futures::executor::block_on;
 use image::GenericImageView;
@@ -14,6 +13,11 @@ use winit::{
     window::{Window, WindowBuilder},
 };
 
+// Planning
+// Render textures on top of one another.
+// Scale camera to the position on the texture.
+// Allow alpha textures to be stacked on top of one another.
+
 const WIDTH: u32 = 256;
 const HEIGHT: u32 = 256;
 
@@ -22,7 +26,57 @@ const DEBUG: bool = true;
 #[cfg(not(debug_assertions))]
 const DEBUG: bool = false;
 
+const VERTICES: &[Vertex] = &[
+    Vertex {
+        position: [-0.0868241, 0.49240386, 0.0],
+        tex_coords: [0.4131759, 0.00759614],
+    }, // A
+    Vertex {
+        position: [-0.49513406, 0.06958647, 0.0],
+        tex_coords: [0.0048659444, 0.43041354],
+    }, // B
+    Vertex {
+        position: [-0.21918549, -0.44939706, 0.0],
+        tex_coords: [0.28081453, 0.949397057],
+    }, // C
+    Vertex {
+        position: [0.35966998, -0.3473291, 0.0],
+        tex_coords: [0.85967, 0.84732911],
+    }, // D
+    Vertex {
+        position: [0.44147372, 0.2347359, 0.0],
+        tex_coords: [0.9414737, 0.2652641],
+    }, // E
+];
+
 const INDICES: &[u16] = &[0, 1, 4, 1, 2, 4, 2, 3, 4];
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
+struct Vertex {
+    position: [f32; 3],
+    tex_coords: [f32; 2],
+}
+impl Vertex {
+    fn desc<'a>() -> wgpu::VertexBufferLayout<'a> {
+        wgpu::VertexBufferLayout {
+            array_stride: std::mem::size_of::<Vertex>() as wgpu::BufferAddress,
+            step_mode: wgpu::InputStepMode::Vertex,
+            attributes: &[
+                wgpu::VertexAttribute {
+                    format: wgpu::VertexFormat::Float3,
+                    offset: 0,
+                    shader_location: 0,
+                },
+                wgpu::VertexAttribute {
+                    format: wgpu::VertexFormat::Float2,
+                    offset: std::mem::size_of::<[f32; 3]>() as wgpu::BufferAddress,
+                    shader_location: 1,
+                },
+            ],
+        }
+    }
+}
 
 #[repr(C)]
 #[derive(Debug, Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
@@ -327,7 +381,7 @@ impl WState {
             vertex: wgpu::VertexState {
                 module: &vs_module,
                 entry_point: "main",
-                buffers: &[model::ModelVertex::desc(), InstanceRaw::desc()],
+                buffers: &[Vertex::desc(), InstanceRaw::desc()],
             },
             fragment: Some(wgpu::FragmentState {
                 module: &fs_module,
