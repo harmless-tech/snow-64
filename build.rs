@@ -4,6 +4,7 @@ use std::{
     fs::{read_to_string, write},
     path::PathBuf,
 };
+use rayon::prelude::*;
 
 struct ShaderData {
     src: String,
@@ -38,15 +39,12 @@ impl ShaderData {
 }
 
 fn main() -> Result<()> {
-    let mut shader_paths = [
-        glob("./src/**/*.vert")?,
-        glob("./src/**/*.frag")?,
-        glob("./src/**/*.comp")?,
-    ];
+    let mut shader_paths = Vec::new();
+    shader_paths.extend(glob("./src/**/*.vert")?);
+    shader_paths.extend(glob("./src/**/*.frag")?);
+    shader_paths.extend(glob("./src/**/*.comp")?);
 
-    let shaders = shader_paths
-        .iter_mut()
-        .flatten()
+    let shaders = shader_paths.into_par_iter()
         .map(|g| ShaderData::load(g?))
         .collect::<Vec<Result<_>>>()
         .into_iter()
