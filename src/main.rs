@@ -161,8 +161,8 @@ impl WState {
 
         let clear_color = wgpu::Color::BLACK;
 
-        let diffuse_bytes = include_bytes!("./assets/NOPUSH-happy-tree.png");
-        let diffuse_texture = texture::Texture::from_bytes(&device, &queue, diffuse_bytes, "happy-tree.png").unwrap();
+        let diffuse_bytes = include_bytes!("./assets/icon-256.png");
+        let diffuse_texture = texture::Texture::from_bytes(&device, &queue, diffuse_bytes, "icon-256.png").unwrap();
 
         let texture_bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             label: Some("Texture Bind Group Layout"),
@@ -387,6 +387,7 @@ impl WState {
     }
 }
 
+//TODO Config.ini
 fn main() -> Result<(), String> {
     let mut args = std::env::args();
     let debug = DEBUG || args.any(|s| s.eq("--debug"));
@@ -454,7 +455,6 @@ struct CameraController {
     is_left_pressed: bool,
     is_right_pressed: bool,
 }
-
 impl CameraController {
     fn new(speed: f32) -> Self {
         Self {
