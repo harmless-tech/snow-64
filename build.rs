@@ -1,7 +1,9 @@
 use anyhow::*;
+use fs_extra::{copy_items, dir::CopyOptions};
 use glob::glob;
 use rayon::prelude::*;
 use std::{
+    env,
     fs::{read_to_string, write},
     path::PathBuf,
 };
@@ -68,6 +70,15 @@ fn main() -> Result<()> {
         )?;
         write(shader.spv_path, compiled.as_binary_u8())?;
     }
+
+    println!("cargo:rerun-if-changed=res/*");
+
+    let out_dir = env::var("OUT_DIR")?;
+    let mut copy_options = CopyOptions::new();
+    copy_options.overwrite = true;
+    let mut paths_to_copy = Vec::new();
+    paths_to_copy.push("res/");
+    copy_items(&paths_to_copy, out_dir, &copy_options)?;
 
     Ok(())
 }
