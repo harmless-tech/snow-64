@@ -8,7 +8,7 @@ documentation = "TODO URL"
 readme = "README.md"
 homepage = "TODO URL"
 repository = "https://github.com/harmless-tech/snow64"
-# license = "MIT License - Copyright (c) 2021 Harmless_Tech"
+# license = "MIT License - Copyright (c) 2021 harmless-tech"
 license-file = "LICENSE"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -24,9 +24,9 @@ futures = "0.3.13"
 bytemuck = { version = "1.5.1", features = ["derive"] } # Can this be removed?
 anyhow = "1.0.40"
 configparser = "2.0.0"
+lazy_static = "1.4.0"
 #rhai = "0.19.15"
 #game-loop = "0.7.3"
-#lazy_static = "1.4.0"
 
 [build-dependencies]
 anyhow = "1.0.40"

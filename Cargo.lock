@@ -1964,6 +1964,7 @@ dependencies = [
  "futures",
  "glob",
  "image",
+ "lazy_static",
  "log",
  "log4rs",
  "oxipng",

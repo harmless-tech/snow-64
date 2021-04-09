@@ -1,4 +1,6 @@
 # Snow64
+[![Rust Build and Test](https://github.com/harmless-tech/snow64/actions/workflows/rust.yml/badge.svg?branch=main)](https://github.com/harmless-tech/snow64/actions/workflows/rust.yml)
+
 Snow64 is an experimental fantasy console.
 
 # Features (Planned)

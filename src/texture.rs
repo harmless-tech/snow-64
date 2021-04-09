@@ -117,4 +117,33 @@ impl Texture {
             sampler,
         }
     }
+
+    pub fn write_texture(&self, queue: &wgpu::Queue, bytes: &[u8]) -> Result<()> {
+        let img = image::load_from_memory_with_format(bytes, image::ImageFormat::Png)?;
+        let rgba = img.as_rgba8().unwrap();
+        let dimensions = img.dimensions();
+
+        let size = wgpu::Extent3d {
+            width: dimensions.0,
+            height: dimensions.1,
+            depth: 1,
+        };
+
+        queue.write_texture(
+            wgpu::TextureCopyView {
+                texture: &self.texture,
+                mip_level: 0,
+                origin: wgpu::Origin3d::ZERO,
+            },
+            rgba,
+            wgpu::TextureDataLayout {
+                offset: 0,
+                bytes_per_row: 4 * dimensions.0,
+                rows_per_image: dimensions.1,
+            },
+            size,
+        );
+
+        Ok(())
+    }
 }

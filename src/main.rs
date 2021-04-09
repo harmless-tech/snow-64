@@ -149,9 +149,11 @@ struct WGPUState {
     num_vertices: u32,
     index_buffer: wgpu::Buffer,
     num_indices: u32,
-    diffuse_bind_group: wgpu::BindGroup,
-    diffuse_texture: texture::Texture, // Move this?
-    camera: Camera,                    // Move this?
+    diffuse_bind_group_0: wgpu::BindGroup, // Combine
+    diffuse_bind_group_1: wgpu::BindGroup, // Combine
+    diffuse_texture_0: texture::Texture, // Combine
+    diffuse_texture_1: texture::Texture, // Combine
+    camera: Camera, // Move this
     uniforms: Uniforms,
     uniform_buffer: wgpu::Buffer,
     uniform_bind_group: wgpu::BindGroup,
@@ -201,12 +203,12 @@ impl WGPUState {
         let clear_color = wgpu::Color::BLACK;
 
         let diffuse_bytes = include_bytes!("./assets/icons/icon-256.oxi.png");
-        let diffuse_texture =
+        let diffuse_texture_0 =
             texture::Texture::from_bytes(&device, &queue, diffuse_bytes, "icon-256.png").unwrap();
 
-        let texture_bind_group_layout =
+        let texture_bind_group_layout_0 =
             device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                label: Some("Texture Bind Group Layout"),
+                label: Some("Texture Bind Group Layout 0"),
                 entries: &[
                     wgpu::BindGroupLayoutEntry {
                         binding: 0,
@@ -229,17 +231,62 @@ impl WGPUState {
                     },
                 ],
             });
-        let diffuse_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("Diffuse Bind Group"),
-            layout: &texture_bind_group_layout,
+        let diffuse_bind_group_0 = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("Diffuse Bind Group 0"),
+            layout: &texture_bind_group_layout_0,
             entries: &[
                 wgpu::BindGroupEntry {
                     binding: 0,
-                    resource: wgpu::BindingResource::TextureView(&diffuse_texture.view),
+                    resource: wgpu::BindingResource::TextureView(&diffuse_texture_0.view),
                 },
                 wgpu::BindGroupEntry {
                     binding: 1,
-                    resource: wgpu::BindingResource::Sampler(&diffuse_texture.sampler),
+                    resource: wgpu::BindingResource::Sampler(&diffuse_texture_0.sampler),
+                },
+            ],
+        });
+
+        let diffuse_bytes = include_bytes!("./assets/icons/viewport.oxi.png");
+        let diffuse_texture_1 =
+            texture::Texture::from_bytes(&device, &queue, diffuse_bytes, "viewport.png").unwrap();
+
+        //TODO Make separate function to create this.
+        let texture_bind_group_layout_1 =
+            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                label: Some("Texture Bind Group Layout 1"),
+                entries: &[
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 0,
+                        visibility: wgpu::ShaderStage::FRAGMENT,
+                        ty: wgpu::BindingType::Texture {
+                            sample_type: wgpu::TextureSampleType::Float { filterable: false },
+                            view_dimension: wgpu::TextureViewDimension::D2,
+                            multisampled: false,
+                        },
+                        count: None,
+                    },
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 1,
+                        visibility: wgpu::ShaderStage::FRAGMENT,
+                        ty: wgpu::BindingType::Sampler {
+                            filtering: true,
+                            comparison: false,
+                        },
+                        count: None,
+                    },
+                ],
+            });
+        let diffuse_bind_group_1 = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("Diffuse Bind Group 1"),
+            layout: &texture_bind_group_layout_1,
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: wgpu::BindingResource::TextureView(&diffuse_texture_1.view),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: wgpu::BindingResource::Sampler(&diffuse_texture_1.sampler),
                 },
             ],
         });
@@ -297,7 +344,7 @@ impl WGPUState {
         let render_pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Render Pipeline Layout"),
-                bind_group_layouts: &[&texture_bind_group_layout, &uniform_bind_group_layout],
+                bind_group_layouts: &[&texture_bind_group_layout_0, &texture_bind_group_layout_1, &uniform_bind_group_layout],
                 push_constant_ranges: &[],
             });
         let render_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
@@ -372,8 +419,10 @@ impl WGPUState {
             num_vertices,
             index_buffer,
             num_indices,
-            diffuse_bind_group,
-            diffuse_texture,
+            diffuse_bind_group_0,
+            diffuse_bind_group_1,
+            diffuse_texture_0,
+            diffuse_texture_1,
             camera,
             uniforms,
             uniform_buffer,
@@ -409,32 +458,8 @@ impl WGPUState {
                     virtual_keycode: Some(VirtualKeyCode::Q),
                     ..
                 } => {
-                    let bytes = include_bytes!("./assets/icons/viewport.oxi.png");
-                    let img = image::load_from_memory_with_format(bytes, image::ImageFormat::Png)
-                        .unwrap();
-                    let rgba = img.as_rgba8().unwrap();
-                    let dimensions = img.dimensions();
-
-                    let size = wgpu::Extent3d {
-                        width: dimensions.0,
-                        height: dimensions.1,
-                        depth: 1,
-                    };
-
-                    self.queue.write_texture(
-                        wgpu::TextureCopyView {
-                            texture: &self.diffuse_texture.texture,
-                            mip_level: 0,
-                            origin: wgpu::Origin3d::ZERO,
-                        },
-                        rgba,
-                        wgpu::TextureDataLayout {
-                            offset: 0,
-                            bytes_per_row: 4 * dimensions.0,
-                            rows_per_image: dimensions.1,
-                        },
-                        size,
-                    );
+                    // let bytes = include_bytes!("./assets/icons/viewport.oxi.png");
+                    // self.diffuse_texture_0.write_texture(&self.queue, bytes).unwrap();
 
                     true
                 }
@@ -484,8 +509,11 @@ impl WGPUState {
             });
 
             render_pass.set_pipeline(&self.render_pipeline);
-            render_pass.set_bind_group(0, &self.diffuse_bind_group, &[]);
-            render_pass.set_bind_group(1, &self.uniform_bind_group, &[]);
+
+            render_pass.set_bind_group(0, &self.diffuse_bind_group_0, &[]);
+            render_pass.set_bind_group(1, &self.diffuse_bind_group_1, &[]);
+            render_pass.set_bind_group(2, &self.uniform_bind_group, &[]);
+
             render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
             render_pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
             render_pass.draw_indexed(0..self.num_indices, 0, 0..1);
