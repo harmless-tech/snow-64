@@ -1,5 +1,5 @@
-# snow-64
-Snow-64 is an experimental fantasy console.
+# Snow64
+Snow64 is an experimental fantasy console.
 
 # Features (Planned)
 

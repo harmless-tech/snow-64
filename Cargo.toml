@@ -1,5 +1,5 @@
 [package]
-name = "snow-64"
+name = "snow64"
 version = "0.0.1"
 authors = ["harmless-tech"]
 edition = "2018"
@@ -7,7 +7,7 @@ description = "An fantasy console."
 documentation = "TODO URL"
 readme = "README.md"
 homepage = "TODO URL"
-repository = "https://github.com/harmless-tech/snow-64"
+repository = "https://github.com/harmless-tech/snow64"
 # license = "MIT License - Copyright (c) 2021 Harmless_Tech"
 license-file = "LICENSE"
 
@@ -17,29 +17,24 @@ license-file = "LICENSE"
 image = "0.23.14"
 log = "0.4.14"
 log4rs = "1.0.0"
-rhai = "0.19.15"
-vulkano = "0.22.0"
-game-loop = "0.7.3"
-lazy_static = "1.4.0"
-rand = "0.8.3"
+wgpu = "0.7.1"
+winit = "0.24.0"
+cgmath = "0.18.0"
+futures = "0.3.13"
+bytemuck = { version = "1.5.1", features = ["derive"] } # Can this be removed?
+anyhow = "1.0.40"
+configparser = "2.0.0"
+#rhai = "0.19.15"
+#game-loop = "0.7.3"
+#lazy_static = "1.4.0"
 
-[dependencies.sdl2]
-version = "0.34.4"
-default-features = false
-features = ["ttf", "image", "gfx", "mixer", "static-link", "use-vcpkg"]
-
-[package.metadata.vcpkg]
-dependencies = ["sdl2[vulkan]", "sdl2-image[libwebp]", "sdl2-ttf", "sdl2-gfx", "sdl2-mixer"]
-git = "https://github.com/microsoft/vcpkg"
-rev = "030cfaa24de9ea1bbf0a4d9c615ce7312ba77af1"
-
-[package.metadata.vcpkg.target]
-x86_64-pc-windows-msvc = { triplet = "x64-windows-static-md" }
-x86_64-unknown-linux-gnu = { triplet = "x64-linux" }
-x86_64-apple-darwin = { triplet = "x64-osx" }
-aarch64-pc-windows-msvc = { triplet = "arm64-windows-static-md" }
-aarch64-unknown-linux-gnu = { triplet = "arm64-linux" }
-aarch64-apple-darwin = { triplet = "arm64-osx" }
+[build-dependencies]
+anyhow = "1.0.40"
+fs_extra = "1.2.0"
+glob = "0.3.0"
+oxipng = "4.0.3"
+rayon = "1.5.0"
+shaderc = "0.7.2"
 
 [profile.release]
 opt-level = 3
