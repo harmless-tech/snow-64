@@ -36,7 +36,7 @@ jobs:
         with:
           name: artifacts-lin
           path: |
-            target/debug/snow-64
+            target/debug/snow64
 
   build-macos:
     runs-on: macos-latest
@@ -62,7 +62,7 @@ jobs:
         with:
           name: artifacts-mac
           path: |
-            target/debug/snow-64
+            target/debug/snow64
 
   build-windows:
     runs-on: windows-latest
@@ -89,4 +89,4 @@ jobs:
         with:
           name: artifacts-win
           path: |
-            target/debug/snow-64.exe
+            target/debug/snow64.exe

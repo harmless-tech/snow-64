@@ -250,18 +250,18 @@ dependencies = [
 
 [[package]]
 name = "cloudflare-zlib"
-version = "0.2.5"
+version = "0.2.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f5ed63a019d55bacd15cadcbcb96bf41b16281417fff393bdb55fa84255fe4b9"
+checksum = "d242d7426b55cf0790009cd9e07434f06ec7efab98f829d94e7fd65ac656f525"
 dependencies = [
  "cloudflare-zlib-sys",
 ]
 
 [[package]]
 name = "cloudflare-zlib-sys"
-version = "0.2.0"
+version = "0.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7e195cb274a0d6ee87e718838a09baecd7cbc9f6075dac256a84cb5842739c06"
+checksum = "5ddbcd1f0ff6024aa6b9fa1aaed38f6e7d8375558d63bb426df321b545c7f5c0"
 dependencies = [
  "cc",
 ]
@@ -1953,7 +1953,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "snow-64"
+name = "snow64"
 version = "0.0.1"
 dependencies = [
  "anyhow",
