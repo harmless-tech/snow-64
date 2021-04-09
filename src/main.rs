@@ -15,6 +15,7 @@ use winit::{
     window,
     window::{Window, WindowBuilder},
 };
+use std::num::NonZeroU32;
 
 //TODO Clean!!!
 
@@ -51,7 +52,7 @@ const VERTICES: &[Vertex] = &[
 
 const INDICES: &[u16] = &[0, 1, 2, 2, 3, 0];
 
-struct Snow;
+struct Snow; //TODO
 
 struct SnowConfig {
     display_res: u32,
@@ -149,10 +150,8 @@ struct WGPUState {
     num_vertices: u32,
     index_buffer: wgpu::Buffer,
     num_indices: u32,
-    diffuse_bind_group_0: wgpu::BindGroup, // Combine
-    diffuse_bind_group_1: wgpu::BindGroup, // Combine
-    diffuse_texture_0: texture::Texture, // Combine
-    diffuse_texture_1: texture::Texture, // Combine
+    diffuse_bind_group: wgpu::BindGroup,
+    diffuse_textures: Vec<texture::Texture>,
     camera: Camera, // Move this
     uniforms: Uniforms,
     uniform_buffer: wgpu::Buffer,
@@ -183,7 +182,7 @@ impl WGPUState {
             .request_device(
                 &wgpu::DeviceDescriptor {
                     label: None,
-                    features: wgpu::Features::default(),
+                    features: wgpu::Features::default() | wgpu::Features::SAMPLED_TEXTURE_BINDING_ARRAY,
                     limits: wgpu::Limits::default(),
                 },
                 None,
@@ -202,13 +201,9 @@ impl WGPUState {
 
         let clear_color = wgpu::Color::BLACK;
 
-        let diffuse_bytes = include_bytes!("./assets/icons/icon-256.oxi.png");
-        let diffuse_texture_0 =
-            texture::Texture::from_bytes(&device, &queue, diffuse_bytes, "icon-256.png").unwrap();
-
-        let texture_bind_group_layout_0 =
+        let texture_bind_group_layout =
             device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                label: Some("Texture Bind Group Layout 0"),
+                label: Some("Texture Bind Group Layout"),
                 entries: &[
                     wgpu::BindGroupLayoutEntry {
                         binding: 0,
@@ -218,7 +213,7 @@ impl WGPUState {
                             view_dimension: wgpu::TextureViewDimension::D2,
                             multisampled: false,
                         },
-                        count: None,
+                        count: NonZeroU32::new(5),
                     },
                     wgpu::BindGroupLayoutEntry {
                         binding: 1,
@@ -231,62 +226,35 @@ impl WGPUState {
                     },
                 ],
             });
-        let diffuse_bind_group_0 = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("Diffuse Bind Group 0"),
-            layout: &texture_bind_group_layout_0,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: wgpu::BindingResource::TextureView(&diffuse_texture_0.view),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: wgpu::BindingResource::Sampler(&diffuse_texture_0.sampler),
-                },
-            ],
-        });
+
+        let mut diffuse_textures = Vec::new();
+
+        let diffuse_bytes = include_bytes!("./assets/icons/icon-256.oxi.png");
+        diffuse_textures.push(texture::Texture::from_bytes(&device, &queue, diffuse_bytes, "icon-256.png").unwrap());
+        diffuse_textures.push(texture::Texture::from_bytes(&device, &queue, diffuse_bytes, "icon-256.png").unwrap());
+        diffuse_textures.push(texture::Texture::from_bytes(&device, &queue, diffuse_bytes, "icon-256.png").unwrap());
+        diffuse_textures.push(texture::Texture::from_bytes(&device, &queue, diffuse_bytes, "icon-256.png").unwrap());
 
         let diffuse_bytes = include_bytes!("./assets/icons/viewport.oxi.png");
-        let diffuse_texture_1 =
-            texture::Texture::from_bytes(&device, &queue, diffuse_bytes, "viewport.png").unwrap();
+        diffuse_textures.push(texture::Texture::from_bytes(&device, &queue, diffuse_bytes, "viewport.png").unwrap());
 
-        //TODO Make separate function to create this.
-        let texture_bind_group_layout_1 =
-            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                label: Some("Texture Bind Group Layout 1"),
-                entries: &[
-                    wgpu::BindGroupLayoutEntry {
-                        binding: 0,
-                        visibility: wgpu::ShaderStage::FRAGMENT,
-                        ty: wgpu::BindingType::Texture {
-                            sample_type: wgpu::TextureSampleType::Float { filterable: false },
-                            view_dimension: wgpu::TextureViewDimension::D2,
-                            multisampled: false,
-                        },
-                        count: None,
-                    },
-                    wgpu::BindGroupLayoutEntry {
-                        binding: 1,
-                        visibility: wgpu::ShaderStage::FRAGMENT,
-                        ty: wgpu::BindingType::Sampler {
-                            filtering: true,
-                            comparison: false,
-                        },
-                        count: None,
-                    },
-                ],
-            });
-        let diffuse_bind_group_1 = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("Diffuse Bind Group 1"),
-            layout: &texture_bind_group_layout_1,
+        let diffuse_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("Diffuse Bind Group"),
+            layout: &texture_bind_group_layout,
             entries: &[
                 wgpu::BindGroupEntry {
                     binding: 0,
-                    resource: wgpu::BindingResource::TextureView(&diffuse_texture_1.view),
+                    resource: wgpu::BindingResource::TextureViewArray(&[
+                        &diffuse_textures.get(0).unwrap().view,
+                        &diffuse_textures.get(1).unwrap().view,
+                        &diffuse_textures.get(2).unwrap().view,
+                        &diffuse_textures.get(3).unwrap().view,
+                        &diffuse_textures.get(4).unwrap().view,
+                    ]),
                 },
                 wgpu::BindGroupEntry {
                     binding: 1,
-                    resource: wgpu::BindingResource::Sampler(&diffuse_texture_1.sampler),
+                    resource: wgpu::BindingResource::Sampler(&texture::create_sampler(&device)),
                 },
             ],
         });
@@ -344,7 +312,7 @@ impl WGPUState {
         let render_pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Render Pipeline Layout"),
-                bind_group_layouts: &[&texture_bind_group_layout_0, &texture_bind_group_layout_1, &uniform_bind_group_layout],
+                bind_group_layouts: &[&texture_bind_group_layout, &uniform_bind_group_layout],
                 push_constant_ranges: &[],
             });
         let render_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
@@ -419,10 +387,8 @@ impl WGPUState {
             num_vertices,
             index_buffer,
             num_indices,
-            diffuse_bind_group_0,
-            diffuse_bind_group_1,
-            diffuse_texture_0,
-            diffuse_texture_1,
+            diffuse_bind_group,
+            diffuse_textures,
             camera,
             uniforms,
             uniform_buffer,
@@ -510,9 +476,8 @@ impl WGPUState {
 
             render_pass.set_pipeline(&self.render_pipeline);
 
-            render_pass.set_bind_group(0, &self.diffuse_bind_group_0, &[]);
-            render_pass.set_bind_group(1, &self.diffuse_bind_group_1, &[]);
-            render_pass.set_bind_group(2, &self.uniform_bind_group, &[]);
+            render_pass.set_bind_group(0, &self.diffuse_bind_group, &[]);
+            render_pass.set_bind_group(1, &self.uniform_bind_group, &[]);
 
             render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
             render_pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
