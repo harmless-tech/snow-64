@@ -50,7 +50,6 @@ const VERTICES: &[Vertex] = &[
 ];
 
 const INDICES: &[u16] = &[0, 1, 2, 2, 3, 0];
-const INDICES_1: &[u16] = &[0, 1, 2, 1, 2, 3];
 
 struct Snow;
 
@@ -202,9 +201,9 @@ impl WGPUState {
 
         let clear_color = wgpu::Color::BLACK;
 
-        let diffuse_bytes = include_bytes!("./assets/icons/icon-512.oxi.png");
+        let diffuse_bytes = include_bytes!("./assets/icons/icon-256.oxi.png");
         let diffuse_texture =
-            texture::Texture::from_bytes(&device, &queue, diffuse_bytes, "icon-512.png").unwrap();
+            texture::Texture::from_bytes(&device, &queue, diffuse_bytes, "icon-256.png").unwrap();
 
         let texture_bind_group_layout =
             device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
@@ -247,11 +246,11 @@ impl WGPUState {
         });
 
         let camera = Camera {
-            eye: (0.0, 0.0, 2.0).into(),
+            eye: (0.0, 0.0, 1.0).into(),
             target: (0.0, 0.0, 0.0).into(),
             up: cgmath::Vector3::unit_y(),
             aspect: sc_desc.width as f32 / sc_desc.height as f32,
-            fovy: 45.0,
+            fovy: 90.0,
             znear: 0.1,
             zfar: 100.0,
         };
@@ -317,8 +316,12 @@ impl WGPUState {
                 entry_point: "main",
                 targets: &[wgpu::ColorTargetState {
                     format: sc_desc.format,
-                    alpha_blend: wgpu::BlendState::REPLACE,
-                    color_blend: wgpu::BlendState::REPLACE,
+                    alpha_blend: wgpu::BlendState::REPLACE, //TODO Is this needed?
+                    color_blend: wgpu::BlendState { //TODO This right?
+                        src_factor: wgpu::BlendFactor::SrcAlpha,
+                        dst_factor: wgpu::BlendFactor::OneMinusSrcAlpha,
+                        operation: wgpu::BlendOperation::Add,
+                    },
                     write_mask: wgpu::ColorWrite::ALL,
                 }],
             }),
@@ -410,7 +413,7 @@ impl WGPUState {
                     virtual_keycode: Some(VirtualKeyCode::Q),
                     ..
                 } => {
-                    let bytes = include_bytes!("./assets/icons/white.oxi.png");
+                    let bytes = include_bytes!("./assets/icons/viewport.oxi.png");
                     let img = image::load_from_memory_with_format(bytes, image::ImageFormat::Png).unwrap();
                     let rgba = img.as_rgba8().unwrap();
                     let dimensions = img.dimensions();
