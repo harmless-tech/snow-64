@@ -24,7 +24,7 @@ wgpu = "0.7.1"
 winit = "0.24.0"
 cgmath = "0.18.0"
 futures = "0.3.13"
-bytemuck = { version = "1.5.1", features = ["derive"] }
+bytemuck = { version = "1.5.1", features = ["derive"] } # Can this be removed?
 anyhow = "1.0.40"
 configparser = "2.0.0"
 

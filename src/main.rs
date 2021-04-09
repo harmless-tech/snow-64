@@ -50,6 +50,7 @@ const VERTICES: &[Vertex] = &[
 ];
 
 const INDICES: &[u16] = &[0, 1, 2, 2, 3, 0];
+const INDICES_1: &[u16] = &[0, 1, 2, 1, 2, 3];
 
 struct Snow;
 
@@ -136,7 +137,7 @@ impl Camera {
     }
 }
 
-struct WState {
+struct WGPUState {
     surface: wgpu::Surface,
     device: wgpu::Device,
     queue: wgpu::Queue,
@@ -150,15 +151,15 @@ struct WState {
     index_buffer: wgpu::Buffer,
     num_indices: u32,
     diffuse_bind_group: wgpu::BindGroup,
-    diffuse_texture: texture::Texture,
-    camera: Camera,
-    camera_controller: CameraController,
+    diffuse_texture: texture::Texture,   // Move this?
+    camera: Camera,                      // Move this?
+    camera_controller: CameraController, // Remove this!
     uniforms: Uniforms,
     uniform_buffer: wgpu::Buffer,
     uniform_bind_group: wgpu::BindGroup,
     depth_texture: texture::Texture,
 }
-impl WState {
+impl WGPUState {
     async fn new(window: &Window) -> Self {
         let size = window.inner_size();
 
@@ -171,6 +172,12 @@ impl WState {
             })
             .await
             .unwrap();
+
+        {
+            let adapter_info = adapter.get_info();
+            info!("Using GPU: {}.", adapter_info.name);
+            info!("Using Render API: {:?}.", adapter_info.backend);
+        }
 
         let (device, queue) = adapter
             .request_device(
@@ -243,7 +250,7 @@ impl WState {
             eye: (0.0, 0.0, 2.0).into(),
             target: (0.0, 0.0, 0.0).into(),
             up: cgmath::Vector3::unit_y(),
-            aspect: 1.0, /*sc_desc.width as f32 / sc_desc.height as f32*/
+            aspect: sc_desc.width as f32 / sc_desc.height as f32,
             fovy: 45.0,
             znear: 0.1,
             zfar: 100.0,
@@ -396,6 +403,42 @@ impl WState {
                     a: 1.0,
                 };
                 true
+            },
+            WindowEvent::KeyboardInput { input, .. } => match input {
+                KeyboardInput {
+                    state: ElementState::Pressed,
+                    virtual_keycode: Some(VirtualKeyCode::Q),
+                    ..
+                } => {
+                    let bytes = include_bytes!("./assets/icons/white.oxi.png");
+                    let img = image::load_from_memory_with_format(bytes, image::ImageFormat::Png).unwrap();
+                    let rgba = img.as_rgba8().unwrap();
+                    let dimensions = img.dimensions();
+
+                    let size = wgpu::Extent3d {
+                        width: dimensions.0,
+                        height: dimensions.1,
+                        depth: 1,
+                    };
+
+                    self.queue.write_texture(
+                        wgpu::TextureCopyView {
+                            texture: &self.diffuse_texture.texture,
+                            mip_level: 0,
+                            origin: wgpu::Origin3d::ZERO,
+                        },
+                        rgba,
+                        wgpu::TextureDataLayout {
+                            offset: 0,
+                            bytes_per_row: 4 * dimensions.0,
+                            rows_per_image: dimensions.1,
+                        },
+                        size,
+                    );
+
+                    true
+                }
+                _ => false
             }
             _ => false,
         }
@@ -404,6 +447,7 @@ impl WState {
     fn update(&mut self) {
         self.camera_controller.update_camera(&mut self.camera);
         self.uniforms.update_view_proj(&self.camera);
+
         self.queue.write_buffer(
             &self.uniform_buffer,
             0,
@@ -479,12 +523,13 @@ fn main() -> Result<()> {
             config.display_res,
             config.display_res,
         )))
+        .with_resizable(false)
         .with_window_icon(Some(create_window_icon()?))
         .with_title("Snow64 - alpha build")
         .build(&event_loop)
         .unwrap();
 
-    let mut state = block_on(WState::new(&window));
+    let mut state = block_on(WGPUState::new(&window));
 
     event_loop.run(move |event, _, control_flow| match event {
         Event::WindowEvent {
