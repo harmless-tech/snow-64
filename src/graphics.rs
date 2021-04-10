@@ -173,7 +173,7 @@ impl WGPUState {
                 ],
             });
 
-        let diffuse_bytes = include_bytes!("./assets/icons/icon-256.oxi.png");
+        let diffuse_bytes = include_bytes!("./assets/icons/empty.oxi.png");
         let mut diffuse_textures = Vec::new();
         diffuse_textures.push(texture::Texture::from_bytes(&device, &queue, diffuse_bytes, "Layer 0").unwrap());
         diffuse_textures.push(texture::Texture::from_bytes(&device, &queue, diffuse_bytes, "Layer 1").unwrap());

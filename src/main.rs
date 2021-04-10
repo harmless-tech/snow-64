@@ -44,6 +44,7 @@ impl Default for SnowConfig {
     }
 }
 
+//TODO Move this?
 pub struct Camera {
     eye: cgmath::Point3<f32>,
     target: cgmath::Point3<f32>,
@@ -76,7 +77,7 @@ fn main() -> Result<()> {
     debug!("Logging Level Debug: TRUE");
     trace!("Logging Level Trace: TRUE");
 
-    let event_loop = EventLoop::new();
+    let event_loop: EventLoop<FixedLoopEvent> = EventLoop::with_user_event();
     let window = WindowBuilder::new()
         .with_min_inner_size(dpi::Size::Physical(dpi::PhysicalSize::new(
             config.display_res,
@@ -96,14 +97,16 @@ fn main() -> Result<()> {
 
     //
     let mut fps_counter: u64 = 0;
-    let mut last_fps_time = Instant::now();
-
-    const FIXED_UPDATE_TIME: f64 = 1.0 / 60.0; //TODO Why is this 48 fps?
     let mut fixed_counter: u64 = 0;
-    let mut last_fixed_time = Instant::now();
+    let mut last_time = Instant::now();
     //
 
+    start_fixed_loop_thread(event_loop.create_proxy());
+
     event_loop.run(move |event, _, control_flow| match event {
+        Event::UserEvent(FixedLoopEvent) => {
+            fixed_counter += 1;
+        }
         Event::WindowEvent {
             ref event,
             window_id,
@@ -142,14 +145,8 @@ fn main() -> Result<()> {
         Event::RedrawRequested(_) => {
             fps_counter += 1;
 
-            if Instant::now().duration_since(last_fixed_time).as_secs_f64() >= FIXED_UPDATE_TIME {
-                last_fixed_time = Instant::now();
-                fixed_counter += 1;
-                //TODO
-            }
-
-            if Instant::now().duration_since(last_fps_time).as_nanos() >= 1_000_000_000 {
-                last_fps_time = Instant::now();
+            if Instant::now().duration_since(last_time).as_secs() >= 1 {
+                last_time = Instant::now();
                 debug!("FPS: {}", fps_counter);
                 debug!("Fixed: {}", fixed_counter);
                 fps_counter = 0;
@@ -205,4 +202,23 @@ fn load_window_icon() -> Result<window::Icon> {
 
     window::Icon::from_rgba(rgba.clone().into_vec(), dimensions.0, dimensions.1)
         .context("Failed to create window icon!")
+}
+
+// Why do I have to divide by two?
+// Why does this give 64 fps and not 60?
+const FIXED_LOOP_TIME: u64 = 16666670 / 2;
+struct FixedLoopEvent;
+fn start_fixed_loop_thread(event: winit::event_loop::EventLoopProxy<FixedLoopEvent>) {
+    let time = std::time::Duration::from_nanos(FIXED_LOOP_TIME);
+
+    std::thread::spawn(move || 'fixed: loop {
+        std::thread::sleep(time);
+
+        match event.send_event(FixedLoopEvent) {
+            Ok(_) => {}
+            Err(_) => {
+                break 'fixed;
+            }
+        }
+    });
 }
