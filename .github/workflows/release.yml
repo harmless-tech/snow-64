@@ -10,8 +10,8 @@ env:
 
 jobs:
   release:
+    needs: [ test-linux, test-macos, test-windows ]
     runs-on: ubuntu-latest
-    # Should this be a draft?
     steps:
       - uses: actions/checkout@v2
       - uses: actions-ecosystem/action-regex-match@v2
@@ -24,6 +24,60 @@ jobs:
         with:
           prerelease: ${{ steps.regex-tag.outputs.match == '' }}
           token: ${{ secrets.GITHUB_TOKEN }}
+
+  test-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - name: Update Rust
+        run: rustup update
+      - name: Rust Version
+        run: rustc --version
+      - name: Run tests
+        run: cargo test --verbose --workspace --release
+
+  test-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - name: Update Rust
+        run: rustup update
+      - name: Rust Version
+        run: rustc --version
+      - name: Run tests
+        run: cargo test --verbose --workspace --release
+
+  test-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - name: Update Rust
+        run: rustup update
+      - name: Rust Version
+        run: rustc --version
+      - name: Run tests
+        run: cargo test --verbose --workspace --release
 
   build-linux:
     needs: [ release ]
@@ -41,8 +95,6 @@ jobs:
         run: rustup update
       - name: Rust Version
         run: rustc --version
-      - name: Run tests
-        run: cargo test --verbose --workspace --release
       - name: Build
         run: cargo build --verbose --workspace --release
       - name: Zip
@@ -73,8 +125,6 @@ jobs:
         run: rustup update
       - name: Rust Version
         run: rustc --version
-      - name: Run tests
-        run: cargo test --verbose --workspace --release
       - name: Build
         run: cargo build --verbose --workspace --release
       - name: Zip
@@ -106,10 +156,8 @@ jobs:
         run: rustup update
       - name: Rust Version
         run: rustc --version
-      - name: Run tests
-        run: cargo test --verbose --workspace --release
       - name: Build
-        run: cargo build --verbose --workspace --
+        run: cargo build --verbose --workspace --release
       - name: Zip
         uses: papeloto/action-zip@v1
         with:
