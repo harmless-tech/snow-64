@@ -59,10 +59,7 @@ impl Texture {
 
         let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
 
-        Self {
-            texture,
-            view,
-        }
+        Self { texture, view }
     }
 
     pub fn create_depth_texture(
@@ -88,10 +85,7 @@ impl Texture {
 
         let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
 
-        Self {
-            texture,
-            view,
-        }
+        Self { texture, view }
     }
 
     pub fn write_texture(&self, queue: &wgpu::Queue, bytes: &[u8]) -> Result<()> {

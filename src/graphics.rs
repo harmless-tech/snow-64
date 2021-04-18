@@ -6,7 +6,7 @@ use cgmath::prelude::*;
 use log::{debug, error, info, trace, warn};
 use std::num::NonZeroU32;
 use wgpu::util::DeviceExt;
-use winit::event::{WindowEvent, KeyboardInput, ElementState, VirtualKeyCode};
+use winit::event::{ElementState, KeyboardInput, VirtualKeyCode, WindowEvent};
 
 const VERTICES: &[Vertex] = &[
     Vertex {
@@ -14,15 +14,15 @@ const VERTICES: &[Vertex] = &[
         tex_coords: [0.0, 0.0],
     }, // A
     Vertex {
-        position: [-1.0, -1.0, 0.0],
+        position: [-1.0, -31.0, 0.0],
         tex_coords: [0.0, 1.0],
     }, // B
     Vertex {
-        position: [1.0, -1.0, 0.0],
+        position: [63.0, -31.0, 0.0],
         tex_coords: [1.0, 1.0],
     }, // C
     Vertex {
-        position: [1.0, 1.0, 0.0],
+        position: [63.0, 1.0, 0.0],
         tex_coords: [1.0, 0.0],
     }, // D
 ];
@@ -128,7 +128,8 @@ impl WGPUState {
             .request_device(
                 &wgpu::DeviceDescriptor {
                     label: None,
-                    features: wgpu::Features::default() | wgpu::Features::SAMPLED_TEXTURE_BINDING_ARRAY,
+                    features: wgpu::Features::default()
+                        | wgpu::Features::SAMPLED_TEXTURE_BINDING_ARRAY,
                     limits: wgpu::Limits::default(),
                 },
                 None,
@@ -141,7 +142,7 @@ impl WGPUState {
             format: adapter.get_swap_chain_preferred_format(&surface),
             width: size.width,
             height: size.height,
-            present_mode: wgpu::PresentMode::Mailbox/*Fifo*/, //TODO Change?
+            present_mode: wgpu::PresentMode::Mailbox, //TODO Allow for vsync mode?
         };
         let swap_chain = device.create_swap_chain(&surface, &sc_desc);
 
@@ -173,13 +174,56 @@ impl WGPUState {
                 ],
             });
 
-        let diffuse_bytes = include_bytes!("./assets/icons/empty.oxi.png");
+        //TODO Clean!
+        let mut img = image::RgbaImage::from(image::ImageBuffer::new(512 * 16, 256 * 16));
+
+        for x in 0..256 {
+            for y in 0..256 {
+                img.put_pixel(x, y, image::Rgba([0, 0, 0, 255]))
+            }
+        }
+
+        for one in 0..256 {
+            for two in vec![0, 256 - 1].iter() {
+                img.put_pixel(one, *two, image::Rgba([255, 0, 0, 255]));
+                img.put_pixel(*two, one, image::Rgba([255, 0, 0, 255]));
+            }
+        }
+
+        let diffuse_bytes = &image::DynamicImage::ImageRgba8(img);
+        //
+
         let mut diffuse_textures = Vec::new();
-        diffuse_textures.push(texture::Texture::from_bytes(&device, &queue, diffuse_bytes, "Layer 0").unwrap());
-        diffuse_textures.push(texture::Texture::from_bytes(&device, &queue, diffuse_bytes, "Layer 1").unwrap());
-        diffuse_textures.push(texture::Texture::from_bytes(&device, &queue, diffuse_bytes, "Layer 2").unwrap());
-        diffuse_textures.push(texture::Texture::from_bytes(&device, &queue, diffuse_bytes, "Layer 3").unwrap());
-        diffuse_textures.push(texture::Texture::from_bytes(&device, &queue, diffuse_bytes, "Layer 4").unwrap());
+        diffuse_textures.push(texture::Texture::from_image(
+            &device,
+            &queue,
+            diffuse_bytes,
+            Some("Layer 0"),
+        ));
+        diffuse_textures.push(texture::Texture::from_image(
+            &device,
+            &queue,
+            diffuse_bytes,
+            Some("Layer 1"),
+        ));
+        diffuse_textures.push(texture::Texture::from_image(
+            &device,
+            &queue,
+            diffuse_bytes,
+            Some("Layer 2"),
+        ));
+        diffuse_textures.push(texture::Texture::from_image(
+            &device,
+            &queue,
+            diffuse_bytes,
+            Some("Layer 3"),
+        ));
+        diffuse_textures.push(texture::Texture::from_image(
+            &device,
+            &queue,
+            diffuse_bytes,
+            Some("Layer 4"),
+        ));
 
         let diffuse_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("Diffuse Bind Group"),
@@ -369,16 +413,6 @@ impl WGPUState {
                 true
             }
             WindowEvent::KeyboardInput { input, .. } => match input {
-                KeyboardInput {
-                    state: ElementState::Pressed,
-                    virtual_keycode: Some(VirtualKeyCode::Q),
-                    ..
-                } => {
-                    // let bytes = include_bytes!("./assets/icons/viewport.oxi.png");
-                    // self.diffuse_texture_0.write_texture(&self.queue, bytes).unwrap();
-
-                    true
-                }
                 KeyboardInput {
                     state: ElementState::Pressed,
                     virtual_keycode: Some(VirtualKeyCode::C),

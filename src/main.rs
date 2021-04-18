@@ -1,21 +1,21 @@
+mod graphics;
 mod logging;
 mod texture;
-mod graphics;
 
+use crate::graphics::WGPUState;
 use anyhow::*;
 use configparser::ini;
 use futures::executor::block_on;
 use image::GenericImageView;
 use log::{debug, error, info, trace, warn};
+use std::time::Instant;
 use winit::{
     dpi,
     event::*,
     event_loop::{ControlFlow, EventLoop},
     window,
-    window::{WindowBuilder},
+    window::WindowBuilder,
 };
-use crate::graphics::WGPUState;
-use std::time::Instant;
 
 // Planning
 // Render textures on top of one another.
