@@ -57,6 +57,27 @@ impl Vertex {
 }
 
 #[repr(C)]
+#[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
+pub struct VertexIgnore {
+    ignore: u32
+}
+impl VertexIgnore {
+    fn desc<'a>() -> wgpu::VertexBufferLayout<'a> {
+        wgpu::VertexBufferLayout {
+            array_stride: std::mem::size_of::<VertexIgnore>() as wgpu::BufferAddress,
+            step_mode: wgpu::InputStepMode::Vertex,
+            attributes: &[
+                wgpu::VertexAttribute {
+                    format: wgpu::VertexFormat::Uint,
+                    offset: 0,
+                    shader_location: 2,
+                },
+            ],
+        }
+    }
+}
+
+#[repr(C)]
 #[derive(Debug, Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct Uniforms {
     view_proj: [[f32; 4]; 4],
@@ -92,6 +113,10 @@ pub struct WGPUState {
     pub render_pipeline: wgpu::RenderPipeline,
     pub vertex_buffer: wgpu::Buffer,
     pub num_vertices: u32,
+
+    pub vertex_buffer_ignore: wgpu::Buffer,
+    pub num_vertices_ignore: u32,
+
     pub index_buffer: wgpu::Buffer,
     pub num_indices: u32,
     pub diffuse_bind_group: wgpu::BindGroup,
@@ -243,14 +268,6 @@ impl WGPUState {
                     binding: 1,
                     resource: wgpu::BindingResource::Sampler(&texture::create_sampler(&device)),
                 },
-                wgpu::BindGroupEntry {
-                    binding: wgpu::BindingResource::Buffer {
-                        buffer: &(),
-                        offset: 0,
-                        size: None
-                    },
-                    resource: ()
-                }
             ],
         });
 
@@ -316,7 +333,7 @@ impl WGPUState {
             vertex: wgpu::VertexState {
                 module: &vs_module,
                 entry_point: "main",
-                buffers: &[Vertex::desc()],
+                buffers: &[Vertex::desc(), VertexIgnore::desc()],
             },
             fragment: Some(wgpu::FragmentState {
                 module: &fs_module,
@@ -361,6 +378,21 @@ impl WGPUState {
         });
         let num_vertices = VERTICES.len() as u32;
 
+        const IGNORE: &[VertexIgnore] = &[
+            VertexIgnore {
+                ignore: 1
+            },
+            VertexIgnore {
+                ignore: 2
+            }
+        ];
+        let vertex_buffer_ignore = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("Vertex Buffer IGNORE"),
+            contents: bytemuck::cast_slice(IGNORE),
+            usage: wgpu::BufferUsage::VERTEX,
+        });
+        let num_vertices_ignore = IGNORE.len() as u32;
+
         let index_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("Index Buffer"),
             contents: bytemuck::cast_slice(INDICES),
@@ -381,6 +413,10 @@ impl WGPUState {
             render_pipeline,
             vertex_buffer,
             num_vertices,
+
+            vertex_buffer_ignore,
+            num_vertices_ignore,
+
             index_buffer,
             num_indices,
             diffuse_bind_group,
@@ -484,6 +520,9 @@ impl WGPUState {
             render_pass.set_bind_group(1, &self.uniform_bind_group, &[]);
 
             render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
+
+            render_pass.set_vertex_buffer(1, self.vertex_buffer_ignore.slice(..));
+
             render_pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
             render_pass.draw_indexed(0..self.num_indices, 0, 0..1);
         }

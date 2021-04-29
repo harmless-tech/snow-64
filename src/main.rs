@@ -1,6 +1,7 @@
 mod graphics;
 mod logging;
 mod texture;
+mod shader_maps;
 
 use crate::graphics::WGPUState;
 use anyhow::*;
