@@ -17,7 +17,7 @@ license-file = "LICENSE"
 image = { version = "0.23.14", default-features = false, features = ["png"] }
 log = "0.4.14"
 log4rs = { version = "1.0.0", default-features = false, features = ["console_appender", "file_appender"] }
-wgpu = "0.7.1"
+wgpu = "0.8.0"
 winit = "0.24.0"
 cgmath = "0.18.0"
 futures = "0.3.13"

@@ -31,7 +31,6 @@ const INDICES: &[u16] = &[0, 1, 2, 2, 3, 0];
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
-#[deprecated(note = "This will be replaced by VertexMap.")]
 pub struct Vertex {
     position: [f32; 3],
     tex_coords: [f32; 2],
@@ -43,12 +42,12 @@ impl Vertex {
             step_mode: wgpu::InputStepMode::Vertex,
             attributes: &[
                 wgpu::VertexAttribute {
-                    format: wgpu::VertexFormat::Float3,
+                    format: wgpu::VertexFormat::Float32x3,
                     offset: 0,
                     shader_location: 0,
                 },
                 wgpu::VertexAttribute {
-                    format: wgpu::VertexFormat::Float2,
+                    format: wgpu::VertexFormat::Float32x2,
                     offset: std::mem::size_of::<[f32; 3]>() as wgpu::BufferAddress,
                     shader_location: 1,
                 },
@@ -71,7 +70,7 @@ impl Vertex {
  * - Sprite - (-16-272, -16-272)
  * - Pixel - (0-255, 0-255)
  */
-#[repr(C)]
+/*#[repr(C)]
 #[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct VertexMap { //TODO !!!
     index: u32,
@@ -113,7 +112,7 @@ impl VertexMap {
 
     pub fn from_pixel(x: u32, y: u32, color: [u32; 4]) -> Self {
     }
-}
+}*/
 
 #[repr(C)]
 #[derive(Debug, Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
@@ -151,10 +150,6 @@ pub struct WGPUState {
     pub render_pipeline: wgpu::RenderPipeline,
     pub vertex_buffer: wgpu::Buffer,
     pub num_vertices: u32,
-
-    pub vertex_buffer_ignore: wgpu::Buffer,
-    pub num_vertices_ignore: u32,
-
     pub index_buffer: wgpu::Buffer,
     pub num_indices: u32,
     pub diffuse_bind_group: wgpu::BindGroup,
@@ -191,8 +186,7 @@ impl WGPUState {
             .request_device(
                 &wgpu::DeviceDescriptor {
                     label: None,
-                    features: wgpu::Features::default()
-                        | wgpu::Features::SAMPLED_TEXTURE_BINDING_ARRAY,
+                    features: wgpu::Features::default() | wgpu::Features::SAMPLED_TEXTURE_BINDING_ARRAY,
                     limits: wgpu::Limits::default(),
                 },
                 None,
@@ -202,7 +196,7 @@ impl WGPUState {
 
         let sc_desc = wgpu::SwapChainDescriptor {
             usage: wgpu::TextureUsage::RENDER_ATTACHMENT,
-            format: adapter.get_swap_chain_preferred_format(&surface),
+            format: adapter.get_swap_chain_preferred_format(&surface).unwrap(), //TODO More safety!
             width: size.width,
             height: size.height,
             present_mode: wgpu::PresentMode::Mailbox, //TODO Allow for vsync mode?
@@ -371,28 +365,25 @@ impl WGPUState {
             vertex: wgpu::VertexState {
                 module: &vs_module,
                 entry_point: "main",
-                buffers: &[Vertex::desc(), VertexIgnore::desc()],
+                buffers: &[Vertex::desc()],
             },
             fragment: Some(wgpu::FragmentState {
                 module: &fs_module,
                 entry_point: "main",
                 targets: &[wgpu::ColorTargetState {
                     format: sc_desc.format,
-                    alpha_blend: wgpu::BlendState::REPLACE,
-                    color_blend: wgpu::BlendState {
-                        src_factor: wgpu::BlendFactor::SrcAlpha,
-                        dst_factor: wgpu::BlendFactor::OneMinusSrcAlpha,
-                        operation: wgpu::BlendOperation::Add,
-                    },
                     write_mask: wgpu::ColorWrite::ALL,
+                    blend: Some(wgpu::BlendState::ALPHA_BLENDING)
                 }],
             }),
             primitive: wgpu::PrimitiveState {
                 topology: wgpu::PrimitiveTopology::TriangleList,
                 strip_index_format: None,
                 front_face: wgpu::FrontFace::Ccw,
-                cull_mode: wgpu::CullMode::Back,
+                cull_mode: Some(wgpu::Face::Back),
+                clamp_depth: false,
                 polygon_mode: wgpu::PolygonMode::Fill,
+                conservative: false
             },
             depth_stencil: Some(wgpu::DepthStencilState {
                 format: texture::Texture::DEPTH_FORMAT,
@@ -400,7 +391,6 @@ impl WGPUState {
                 depth_compare: wgpu::CompareFunction::Less,
                 stencil: wgpu::StencilState::default(),
                 bias: wgpu::DepthBiasState::default(),
-                clamp_depth: false,
             }),
             multisample: wgpu::MultisampleState {
                 count: 1,
@@ -415,21 +405,6 @@ impl WGPUState {
             usage: wgpu::BufferUsage::VERTEX,
         });
         let num_vertices = VERTICES.len() as u32;
-
-        const IGNORE: &[VertexIgnore] = &[
-            VertexIgnore {
-                ignore: 1
-            },
-            VertexIgnore {
-                ignore: 2
-            }
-        ];
-        let vertex_buffer_ignore = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("Vertex Buffer IGNORE"),
-            contents: bytemuck::cast_slice(IGNORE),
-            usage: wgpu::BufferUsage::VERTEX,
-        });
-        let num_vertices_ignore = IGNORE.len() as u32;
 
         let index_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("Index Buffer"),
@@ -451,10 +426,6 @@ impl WGPUState {
             render_pipeline,
             vertex_buffer,
             num_vertices,
-
-            vertex_buffer_ignore,
-            num_vertices_ignore,
-
             index_buffer,
             num_indices,
             diffuse_bind_group,
@@ -534,16 +505,16 @@ impl WGPUState {
         {
             let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                 label: Some("Render Pass"),
-                color_attachments: &[wgpu::RenderPassColorAttachmentDescriptor {
-                    attachment: &frame.view,
+                color_attachments: &[wgpu::RenderPassColorAttachment {
+                    view: &frame.view,
                     resolve_target: None,
                     ops: wgpu::Operations {
                         load: wgpu::LoadOp::Clear(self.clear_color),
                         store: true,
                     },
                 }],
-                depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachmentDescriptor {
-                    attachment: &self.depth_texture.view,
+                depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
+                    view: &self.depth_texture.view,
                     depth_ops: Some(wgpu::Operations {
                         load: wgpu::LoadOp::Clear(1.0),
                         store: true,
@@ -558,9 +529,6 @@ impl WGPUState {
             render_pass.set_bind_group(1, &self.uniform_bind_group, &[]);
 
             render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
-
-            render_pass.set_vertex_buffer(1, self.vertex_buffer_ignore.slice(..));
-
             render_pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
             render_pass.draw_indexed(0..self.num_indices, 0, 0..1);
         }

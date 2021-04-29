@@ -27,6 +27,12 @@ use winit::{
  * Uploaded tile sheets and sprite sheets to the gpu and have a shader do the rendering.
  * The pixel layer rendering will remain the same? Or maybe upload an array of colors and have the
  *     GPU do the math?
+ *
+ *
+ *
+ * TODO Maybe?
+ * Have a big buffer in the program.
+ * Upload a small part of it to the gpu.
  */
 
 const DISPLAY_RES: u32 = 256;
