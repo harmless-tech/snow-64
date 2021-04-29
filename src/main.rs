@@ -22,6 +22,12 @@ use winit::{
 // Scale camera to the position on the texture.
 // Allow alpha textures to be stacked on top of one another.
 
+/* TODO Maybe?
+ * Uploaded tile sheets and sprite sheets to the gpu and have a shader do the rendering.
+ * The pixel layer rendering will remain the same? Or maybe upload an array of colors and have the
+ *     GPU do the math?
+ */
+
 const DISPLAY_RES: u32 = 256;
 
 #[cfg(debug_assertions)]
