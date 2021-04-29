@@ -31,6 +31,7 @@ const INDICES: &[u16] = &[0, 1, 2, 2, 3, 0];
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
+#[deprecated(note = "This will be replaced by VertexMap.")]
 pub struct Vertex {
     position: [f32; 3],
     tex_coords: [f32; 2],
@@ -56,12 +57,28 @@ impl Vertex {
     }
 }
 
+/**
+ * Index:
+ * - 0-127 = White Text
+ * - 128-255 = Black Text
+ * - 256-511 = Tiles
+ * - 512-767 = Sprites
+ * - 768-... = Pixel Layer
+ *
+ * Position:
+ * - Text - (0-31, 0-31)
+ * - Tile - (0-15, 0-15)
+ * - Sprite - (-16-272, -16-272)
+ * - Pixel - (0-255, 0-255)
+ */
 #[repr(C)]
 #[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
-pub struct VertexIgnore {
-    ignore: u32
+pub struct VertexMap { //TODO !!!
+    index: u32,
+    position: [i32; 2],
+    color: [u32; 4]
 }
-impl VertexIgnore {
+impl VertexMap {
     fn desc<'a>() -> wgpu::VertexBufferLayout<'a> {
         wgpu::VertexBufferLayout {
             array_stride: std::mem::size_of::<VertexIgnore>() as wgpu::BufferAddress,
@@ -70,10 +87,31 @@ impl VertexIgnore {
                 wgpu::VertexAttribute {
                     format: wgpu::VertexFormat::Uint,
                     offset: 0,
+                    shader_location: 0,
+                },
+                wgpu::VertexAttribute {
+                    format: wgpu::VertexFormat::Int2,
+                    offset: 0,
+                    shader_location: 1,
+                },
+                wgpu::VertexAttribute {
+                    format: wgpu::VertexFormat::Uint4,
+                    offset: 0,
                     shader_location: 2,
                 },
             ],
         }
+    }
+
+    //TODO Safer wrapper over these methods.
+
+    pub fn from_tile(tile: u32) -> Self {
+    }
+
+    pub fn from_sprite(sprite: u32) -> Self {
+    }
+
+    pub fn from_pixel(x: u32, y: u32, color: [u32; 4]) -> Self {
     }
 }
 
@@ -200,16 +238,16 @@ impl WGPUState {
             });
 
         //TODO Clean!
-        let mut img = image::RgbaImage::from(image::ImageBuffer::new(512 * 16, 256 * 16));
+        let mut img = image::RgbaImage::from(image::ImageBuffer::new(64, 64));
 
-        for x in 0..256 {
-            for y in 0..256 {
+        for x in 0..64 {
+            for y in 0..64 {
                 img.put_pixel(x, y, image::Rgba([0, 0, 0, 255]))
             }
         }
 
-        for one in 0..256 {
-            for two in vec![0, 256 - 1].iter() {
+        for one in 0..64 {
+            for two in vec![0, 64 - 1].iter() {
                 img.put_pixel(one, *two, image::Rgba([255, 0, 0, 255]));
                 img.put_pixel(*two, one, image::Rgba([255, 0, 0, 255]));
             }
