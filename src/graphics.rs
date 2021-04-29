@@ -243,6 +243,14 @@ impl WGPUState {
                     binding: 1,
                     resource: wgpu::BindingResource::Sampler(&texture::create_sampler(&device)),
                 },
+                wgpu::BindGroupEntry {
+                    binding: wgpu::BindingResource::Buffer {
+                        buffer: &(),
+                        offset: 0,
+                        size: None
+                    },
+                    resource: ()
+                }
             ],
         });
 
