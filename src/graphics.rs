@@ -1,6 +1,6 @@
 //TODO Clean!
 
-use crate::{texture, Camera};
+use crate::{texture, Camera, DISPLAY_RES};
 use anyhow::*;
 use cgmath::prelude::*;
 use log::{debug, error, info, trace, warn};
@@ -14,15 +14,15 @@ const VERTICES: &[Vertex] = &[
         tex_coords: [0.0, 0.0],
     }, // A
     Vertex {
-        position: [-1.0, -31.0, 0.0],
+        position: [-1.0, -1.0, 0.0],
         tex_coords: [0.0, 1.0],
     }, // B
     Vertex {
-        position: [63.0, -31.0, 0.0],
+        position: [1.0, -1.0, 0.0],
         tex_coords: [1.0, 1.0],
     }, // C
     Vertex {
-        position: [63.0, 1.0, 0.0],
+        position: [1.0, 1.0, 0.0],
         tex_coords: [1.0, 0.0],
     }, // D
 ];
@@ -42,12 +42,12 @@ impl Vertex {
             step_mode: wgpu::InputStepMode::Vertex,
             attributes: &[
                 wgpu::VertexAttribute {
-                    format: wgpu::VertexFormat::Float32x3,
+                    format: wgpu::VertexFormat::Float3,
                     offset: 0,
                     shader_location: 0,
                 },
                 wgpu::VertexAttribute {
-                    format: wgpu::VertexFormat::Float32x2,
+                    format: wgpu::VertexFormat::Float2,
                     offset: std::mem::size_of::<[f32; 3]>() as wgpu::BufferAddress,
                     shader_location: 1,
                 },
@@ -55,64 +55,6 @@ impl Vertex {
         }
     }
 }
-
-/**
- * Index:
- * - 0-127 = White Text
- * - 128-255 = Black Text
- * - 256-511 = Tiles
- * - 512-767 = Sprites
- * - 768-... = Pixel Layer
- *
- * Position:
- * - Text - (0-31, 0-31)
- * - Tile - (0-15, 0-15)
- * - Sprite - (-16-272, -16-272)
- * - Pixel - (0-255, 0-255)
- */
-/*#[repr(C)]
-#[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
-pub struct VertexMap { //TODO !!!
-    index: u32,
-    position: [i32; 2],
-    color: [u32; 4]
-}
-impl VertexMap {
-    fn desc<'a>() -> wgpu::VertexBufferLayout<'a> {
-        wgpu::VertexBufferLayout {
-            array_stride: std::mem::size_of::<VertexIgnore>() as wgpu::BufferAddress,
-            step_mode: wgpu::InputStepMode::Vertex,
-            attributes: &[
-                wgpu::VertexAttribute {
-                    format: wgpu::VertexFormat::Uint,
-                    offset: 0,
-                    shader_location: 0,
-                },
-                wgpu::VertexAttribute {
-                    format: wgpu::VertexFormat::Int2,
-                    offset: 0,
-                    shader_location: 1,
-                },
-                wgpu::VertexAttribute {
-                    format: wgpu::VertexFormat::Uint4,
-                    offset: 0,
-                    shader_location: 2,
-                },
-            ],
-        }
-    }
-
-    //TODO Safer wrapper over these methods.
-
-    pub fn from_tile(tile: u32) -> Self {
-    }
-
-    pub fn from_sprite(sprite: u32) -> Self {
-    }
-
-    pub fn from_pixel(x: u32, y: u32, color: [u32; 4]) -> Self {
-    }
-}*/
 
 #[repr(C)]
 #[derive(Debug, Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
@@ -154,7 +96,7 @@ pub struct WGPUState {
     pub num_indices: u32,
     pub diffuse_bind_group: wgpu::BindGroup,
     pub diffuse_textures: Vec<texture::Texture>,
-    pub camera: Camera, // Move this
+    pub camera: Camera, //TODO Move this?
     pub uniforms: Uniforms,
     pub uniform_buffer: wgpu::Buffer,
     pub uniform_bind_group: wgpu::BindGroup,
@@ -196,7 +138,7 @@ impl WGPUState {
 
         let sc_desc = wgpu::SwapChainDescriptor {
             usage: wgpu::TextureUsage::RENDER_ATTACHMENT,
-            format: adapter.get_swap_chain_preferred_format(&surface).unwrap(), //TODO More safety!
+            format: adapter.get_swap_chain_preferred_format(&surface),
             width: size.width,
             height: size.height,
             present_mode: wgpu::PresentMode::Mailbox, //TODO Allow for vsync mode?
@@ -232,10 +174,10 @@ impl WGPUState {
             });
 
         //TODO Clean!
-        let mut img = image::RgbaImage::from(image::ImageBuffer::new(64, 64));
+        let mut img = image::RgbaImage::from(image::ImageBuffer::new(DISPLAY_RES, DISPLAY_RES));
 
-        for x in 0..64 {
-            for y in 0..64 {
+        for x in 0..DISPLAY_RES {
+            for y in 0..DISPLAY_RES {
                 img.put_pixel(x, y, image::Rgba([0, 0, 0, 255]))
             }
         }
@@ -373,17 +315,20 @@ impl WGPUState {
                 targets: &[wgpu::ColorTargetState {
                     format: sc_desc.format,
                     write_mask: wgpu::ColorWrite::ALL,
-                    blend: Some(wgpu::BlendState::ALPHA_BLENDING)
+                    alpha_blend: wgpu::BlendState::REPLACE,
+                    color_blend: wgpu::BlendState {
+                        src_factor: wgpu::BlendFactor::SrcAlpha,
+                        dst_factor: wgpu::BlendFactor::OneMinusSrcAlpha,
+                        operation: wgpu::BlendOperation::Add,
+                    },
                 }],
             }),
             primitive: wgpu::PrimitiveState {
                 topology: wgpu::PrimitiveTopology::TriangleList,
                 strip_index_format: None,
                 front_face: wgpu::FrontFace::Ccw,
-                cull_mode: Some(wgpu::Face::Back),
-                clamp_depth: false,
+                cull_mode: wgpu::CullMode::Back,
                 polygon_mode: wgpu::PolygonMode::Fill,
-                conservative: false
             },
             depth_stencil: Some(wgpu::DepthStencilState {
                 format: texture::Texture::DEPTH_FORMAT,
@@ -391,6 +336,7 @@ impl WGPUState {
                 depth_compare: wgpu::CompareFunction::Less,
                 stencil: wgpu::StencilState::default(),
                 bias: wgpu::DepthBiasState::default(),
+                clamp_depth: false
             }),
             multisample: wgpu::MultisampleState {
                 count: 1,
@@ -505,16 +451,16 @@ impl WGPUState {
         {
             let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                 label: Some("Render Pass"),
-                color_attachments: &[wgpu::RenderPassColorAttachment {
-                    view: &frame.view,
+                color_attachments: &[wgpu::RenderPassColorAttachmentDescriptor {
+                    attachment: &frame.view,
                     resolve_target: None,
                     ops: wgpu::Operations {
                         load: wgpu::LoadOp::Clear(self.clear_color),
                         store: true,
                     },
                 }],
-                depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
-                    view: &self.depth_texture.view,
+                depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachmentDescriptor {
+                    attachment: &self.depth_texture.view,
                     depth_ops: Some(wgpu::Operations {
                         load: wgpu::LoadOp::Clear(1.0),
                         store: true,

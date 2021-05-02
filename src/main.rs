@@ -218,7 +218,7 @@ fn load_window_icon() -> Result<window::Icon> {
 }
 
 // Why do I have to divide by two?
-// Why does this give 64 fps and not 60?
+// This is now 60 fps for some reason.
 const FIXED_LOOP_TIME: u64 = 16666670 / 2;
 struct FixedLoopEvent;
 fn start_fixed_loop_thread(event: winit::event_loop::EventLoopProxy<FixedLoopEvent>) {
