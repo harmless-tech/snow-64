@@ -190,7 +190,19 @@ impl WGPUState {
             }
         }
 
-        let diffuse_bytes = &image::DynamicImage::ImageRgba8(img);
+        let diffuse_bytes = &image::DynamicImage::ImageRgba8(img.clone());
+
+        for x in 0..DISPLAY_RES {
+            for y in 0..DISPLAY_RES {
+                img.put_pixel(x, y, image::Rgba([0, 0, 0, 0]))
+            }
+        }
+
+        for a in 0..64 {
+            img.put_pixel(a, 3, image::Rgba([0, 0, 255, 255]));
+        }
+
+        let diffuse_bytes_two = &image::DynamicImage::ImageRgba8(img.clone());
         //
 
         //TODO Maybe remove this, or change it.
@@ -198,7 +210,7 @@ impl WGPUState {
         diffuse_textures.push(texture::Texture::from_image(
             &device,
             &queue,
-            diffuse_bytes,
+            diffuse_bytes_two,
             Some("Layer 0"),
         ));
         diffuse_textures.push(texture::Texture::from_image(
@@ -294,8 +306,8 @@ impl WGPUState {
         let depth_texture =
             texture::Texture::create_depth_texture(&device, &surface_desc, "Depth Texture");
 
-        let vs_module = device.create_shader_module(&wgpu::include_wgsl!("./assets/shaders/shader.vert.wgsl"));
-        let fs_module = device.create_shader_module(&wgpu::include_wgsl!("./assets/shaders/shader.frag.wgsl"));
+        let vs_module = device.create_shader_module(&wgpu::include_spirv!("./assets/shaders/shader.vert.spv"));
+        let fs_module = device.create_shader_module(&wgpu::include_spirv!("./assets/shaders/shader.frag.spv"));
         let render_pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Render Pipeline Layout"),

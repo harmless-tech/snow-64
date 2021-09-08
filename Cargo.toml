@@ -17,7 +17,7 @@ resolver = "2"
 image = { version = "0.23.14", default-features = false, features = ["png"] }
 log = "0.4.14"
 log4rs = { version = "1.0.0", default-features = false, features = ["console_appender", "file_appender"] }
-wgpu = "0.10.1" # wgpu 0.8.0 has a problem with glsl shaders.
+wgpu = { version = "0.10.1", features = ["spirv"] }
 winit = "0.25.0"
 cgmath = "0.18.0"
 futures = "0.3.17"
@@ -36,7 +36,7 @@ glob = "0.3.0"
 oxipng = "5.0.0"
 rayon = "1.5.1"
 shaderc = "0.7.3"
-naga = { version = "0.6.3", features = ["glsl-in", "spv-in", "wgsl-out"] }
+#naga = { version = "0.6.3", features = ["glsl-in", "wgsl-out"] }
 
 [profile.release]
 opt-level = 3 # "z"
