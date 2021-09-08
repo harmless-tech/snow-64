@@ -109,7 +109,7 @@ fn main() -> Result<()> {
 
     let mut state = block_on(WGPUState::new(&window));
 
-    //
+    // For DBG, remove later
     let mut fps_counter: u64 = 0;
     let mut fixed_counter: u64 = 0;
     let mut last_time = Instant::now();
@@ -119,7 +119,9 @@ fn main() -> Result<()> {
 
     event_loop.run(move |event, _, control_flow| match event {
         Event::UserEvent(FixedLoopEvent) => {
+            // For DBG, remove later
             fixed_counter += 1;
+            //
         }
         Event::WindowEvent {
             ref event,
@@ -157,15 +159,16 @@ fn main() -> Result<()> {
             }
         }
         Event::RedrawRequested(_) => {
+            // For DBG, remove later
             fps_counter += 1;
-
             if Instant::now().duration_since(last_time).as_secs() >= 1 {
                 last_time = Instant::now();
-                debug!("FPS: {}", fps_counter);
-                debug!("Fixed: {}", fixed_counter);
+                info!("FPS: {}", fps_counter);
+                // info!("Fixed: {}", fixed_counter);
                 fps_counter = 0;
                 fixed_counter = 0;
             }
+            //
 
             state.update();
             match state.render() {
@@ -218,21 +221,35 @@ fn load_window_icon() -> Result<window::Icon> {
         .context("Failed to create window icon!")
 }
 
-// Why do I have to divide by two?
-// This is now 60 fps for some reason.
-const FIXED_LOOP_TIME: u64 = 16666670 / 2;
+const FIXED_LOOP_TIME: u64 = 16666667 - 2800000; //TODO Is this different on every computer?
 struct FixedLoopEvent;
 fn start_fixed_loop_thread(event: winit::event_loop::EventLoopProxy<FixedLoopEvent>) {
     let time = std::time::Duration::from_nanos(FIXED_LOOP_TIME);
 
-    std::thread::spawn(move || 'fixed: loop {
-        std::thread::sleep(time);
+    std::thread::spawn(move || {
+        // For DBG, remove later
+        let mut fixed_counter: u64 = 0;
+        let mut last_time = Instant::now();
+        //
 
-        match event.send_event(FixedLoopEvent) {
-            Ok(_) => {}
-            Err(_) => {
-                break 'fixed;
+        'fixed: loop {
+            std::thread::sleep(time);
+
+            match event.send_event(FixedLoopEvent) {
+                Ok(_) => {}
+                Err(_) => {
+                    break 'fixed;
+                }
             }
+
+            // For DBG, remove later
+            fixed_counter += 1;
+            if Instant::now().duration_since(last_time).as_secs() >= 1 {
+                last_time = Instant::now();
+                info!("Fixed (Internal): {}", fixed_counter);
+                fixed_counter = 0;
+            }
+            //
         }
     });
 }

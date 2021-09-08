@@ -10,7 +10,7 @@ struct ShaderData {
     src: String,
     src_path: PathBuf,
     out_path: PathBuf,
-    kind: shaderc::ShaderKind,
+    kind: naga::ShaderStage,
 }
 impl ShaderData {
     pub fn load(src_path: PathBuf) -> Result<Self> {
@@ -20,14 +20,14 @@ impl ShaderData {
             .to_str()
             .context("Cannot convert path to &str.")?;
         let kind = match ext {
-            "vert" => shaderc::ShaderKind::Vertex,
-            "frag" => shaderc::ShaderKind::Fragment,
-            "comp" => shaderc::ShaderKind::Compute,
+            "vert" => naga::ShaderStage::Vertex,
+            "frag" => naga::ShaderStage::Fragment,
+            "comp" => naga::ShaderStage::Compute,
             _ => bail!("Unsupported shader: {}", src_path.display()),
         };
 
         let src = read_to_string(src_path.clone())?;
-        let out_path = src_path.with_extension(format!("{}.spv", ext));
+        let out_path = src_path.with_extension(format!("{}.wgsl", ext));
 
         Ok(Self {
             src,
@@ -72,32 +72,30 @@ fn main() -> Result<()> {
         .into_iter()
         .collect::<Result<Vec<_>>>()?;
 
-    let mut compiler = shaderc::Compiler::new().context("Unable to create shader compiler.")?;
-
     for shader in shaders {
         println!(
             "cargo:rerun-if-changed={}",
             shader.src_path.as_os_str().to_str().unwrap()
         );
 
-        let compiled = compiler.compile_into_spirv(
-            &shader.src,
-            shader.kind,
-            &shader.src_path.to_str().unwrap(),
-            "main",
-            None,
-        )?;
-        write(shader.out_path, compiled.as_binary_u8())?;
+        // Convert GLSL to WGSL (Naga can't convert glsl with texture arrays... Sigh)
+        let glsl_module = naga::front::glsl::Parser::default()
+            .parse(
+                &naga::front::glsl::Options {
+                    stage: shader.kind,
+                    defines: Default::default(),
+                },
+                &shader.src.as_str(),
+            )
+            .unwrap();
+        let glsl_info = naga::valid::Validator::new(
+            naga::valid::ValidationFlags::all(),
+            naga::valid::Capabilities::empty(),
+        )
+        .validate(&glsl_module)?;
 
-        // Convert GLSL to WGSL (For the future when naga can convert glsl with texture arrays)
-        // let glsl_module = naga::front::glsl::Parser::default().parse(&naga::front::glsl::Options {
-        //     stage: shader.kind,
-        //     defines: Default::default()
-        // }, &shader.src.as_str()).unwrap();
-        // let glsl_info = naga::valid::Validator::new(naga::valid::ValidationFlags::all(), naga::valid::Capabilities::empty()).validate(&glsl_module)?;
-        //
-        // let shader_str = naga::back::wgsl::write_string(&glsl_module, &glsl_info)?;
-        // write(shader.out_path, shader_str)?;
+        let shader_str = naga::back::wgsl::write_string(&glsl_module, &glsl_info)?;
+        write(shader.out_path, shader_str)?;
     }
 
     let mut image_paths = Vec::new();

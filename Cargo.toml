@@ -4,7 +4,6 @@ version = "0.0.1"
 authors = ["harmless-tech"]
 edition = "2018"
 description = "A fantasy console."
-documentation = "TODO URL"
 readme = "README.md"
 homepage = "TODO URL"
 repository = "https://github.com/harmless-tech/snow64"
@@ -17,7 +16,7 @@ resolver = "2"
 image = { version = "0.23.14", default-features = false, features = ["png"] }
 log = "0.4.14"
 log4rs = { version = "1.0.0", default-features = false, features = ["console_appender", "file_appender"] }
-wgpu = { version = "0.10.1", features = ["spirv"] }
+wgpu = "0.10.1"
 winit = "0.25.0"
 cgmath = "0.18.0"
 futures = "0.3.17"
@@ -26,7 +25,7 @@ anyhow = "1.0.43"
 configparser = "2.1.0"
 lazy_static = "1.4.0"
 seahash = "4.1.0"
-snowbinary = { version = "0.1.0", features = ["v_hash"] }
+#snowbinary = { version = "0.1.0", features = ["v_hash"] } TODO Improve this before I use it.
 #rhai = "1.0.4"
 
 [build-dependencies]
@@ -35,8 +34,7 @@ fs_extra = "1.2.0"
 glob = "0.3.0"
 oxipng = "5.0.0"
 rayon = "1.5.1"
-shaderc = "0.7.3"
-#naga = { version = "0.6.3", features = ["glsl-in", "wgsl-out"] }
+naga = { version = "0.6.3", features = ["glsl-in", "wgsl-out"] }
 
 [profile.release]
 opt-level = 3 # "z"

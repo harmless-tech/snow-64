@@ -4,7 +4,6 @@ use crate::{texture, Camera, DISPLAY_RES};
 use anyhow::*;
 use cgmath::prelude::*;
 use log::{debug, error, info, trace, warn};
-use std::num::NonZeroU32;
 use wgpu::{util::DeviceExt, BlendState};
 use winit::event::{ElementState, KeyboardInput, VirtualKeyCode, WindowEvent};
 
@@ -127,7 +126,7 @@ impl WGPUState {
             .request_device(
                 &wgpu::DeviceDescriptor {
                     label: None,
-                    features: wgpu::Features::default() | wgpu::Features::TEXTURE_BINDING_ARRAY,
+                    features: wgpu::Features::default()/* | wgpu::Features::TEXTURE_BINDING_ARRAY*/,
                     limits: wgpu::Limits::default(),
                 },
                 None,
@@ -160,7 +159,7 @@ impl WGPUState {
                             view_dimension: wgpu::TextureViewDimension::D2,
                             multisampled: false,
                         },
-                        count: NonZeroU32::new(5),
+                        count: None, //NonZeroU32::new(5),
                     },
                     wgpu::BindGroupLayoutEntry {
                         binding: 1,
@@ -213,30 +212,30 @@ impl WGPUState {
             diffuse_bytes_two,
             Some("Layer 0"),
         ));
-        diffuse_textures.push(texture::Texture::from_image(
-            &device,
-            &queue,
-            diffuse_bytes,
-            Some("Layer 1"),
-        ));
-        diffuse_textures.push(texture::Texture::from_image(
-            &device,
-            &queue,
-            diffuse_bytes,
-            Some("Layer 2"),
-        ));
-        diffuse_textures.push(texture::Texture::from_image(
-            &device,
-            &queue,
-            diffuse_bytes,
-            Some("Layer 3"),
-        ));
-        diffuse_textures.push(texture::Texture::from_image(
-            &device,
-            &queue,
-            diffuse_bytes,
-            Some("Layer 4"),
-        ));
+        // diffuse_textures.push(texture::Texture::from_image(
+        //     &device,
+        //     &queue,
+        //     diffuse_bytes,
+        //     Some("Layer 1"),
+        // ));
+        // diffuse_textures.push(texture::Texture::from_image(
+        //     &device,
+        //     &queue,
+        //     diffuse_bytes,
+        //     Some("Layer 2"),
+        // ));
+        // diffuse_textures.push(texture::Texture::from_image(
+        //     &device,
+        //     &queue,
+        //     diffuse_bytes,
+        //     Some("Layer 3"),
+        // ));
+        // diffuse_textures.push(texture::Texture::from_image(
+        //     &device,
+        //     &queue,
+        //     diffuse_bytes,
+        //     Some("Layer 4"),
+        // ));
         //
 
         let diffuse_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
@@ -245,13 +244,14 @@ impl WGPUState {
             entries: &[
                 wgpu::BindGroupEntry {
                     binding: 0,
-                    resource: wgpu::BindingResource::TextureViewArray(&[
+                    resource: wgpu::BindingResource::TextureView(&diffuse_textures.get(0).unwrap().view)
+                    /*wgpu::BindingResource::TextureViewArray(&[
                         &diffuse_textures.get(0).unwrap().view,
                         &diffuse_textures.get(1).unwrap().view,
                         &diffuse_textures.get(2).unwrap().view,
                         &diffuse_textures.get(3).unwrap().view,
                         &diffuse_textures.get(4).unwrap().view,
-                    ]),
+                    ])*/,
                 },
                 wgpu::BindGroupEntry {
                     binding: 1,
@@ -306,8 +306,10 @@ impl WGPUState {
         let depth_texture =
             texture::Texture::create_depth_texture(&device, &surface_desc, "Depth Texture");
 
-        let vs_module = device.create_shader_module(&wgpu::include_spirv!("./assets/shaders/shader.vert.spv"));
-        let fs_module = device.create_shader_module(&wgpu::include_spirv!("./assets/shaders/shader.frag.spv"));
+        let vs_module =
+            device.create_shader_module(&wgpu::include_wgsl!("./assets/shaders/shader.vert.wgsl"));
+        let fs_module =
+            device.create_shader_module(&wgpu::include_wgsl!("./assets/shaders/shader.frag.wgsl"));
         let render_pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Render Pipeline Layout"),
