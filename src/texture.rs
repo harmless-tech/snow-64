@@ -1,5 +1,6 @@
 use anyhow::*;
 use image::GenericImageView;
+use std::num::NonZeroU32;
 
 pub struct Texture {
     pub texture: wgpu::Texture,
@@ -30,7 +31,7 @@ impl Texture {
         let size = wgpu::Extent3d {
             width: dimensions.0,
             height: dimensions.1,
-            depth: 1
+            depth_or_array_layers: 1,
         };
         let texture = device.create_texture(&wgpu::TextureDescriptor {
             label,
@@ -39,20 +40,21 @@ impl Texture {
             sample_count: 1,
             dimension: wgpu::TextureDimension::D2,
             format: wgpu::TextureFormat::Rgba8UnormSrgb,
-            usage: wgpu::TextureUsage::SAMPLED | wgpu::TextureUsage::COPY_DST,
+            usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
         });
 
         queue.write_texture(
-            wgpu::TextureCopyView {
+            wgpu::ImageCopyTexture {
                 texture: &texture,
                 mip_level: 0,
                 origin: wgpu::Origin3d::ZERO,
+                aspect: Default::default(),
             },
             rgba,
-            wgpu::TextureDataLayout {
+            wgpu::ImageDataLayout {
                 offset: 0,
-                bytes_per_row: 4 * dimensions.0,
-                rows_per_image: dimensions.1,
+                bytes_per_row: NonZeroU32::new(4 * dimensions.0),
+                rows_per_image: NonZeroU32::new(dimensions.1),
             },
             size,
         );
@@ -64,13 +66,13 @@ impl Texture {
 
     pub fn create_depth_texture(
         device: &wgpu::Device,
-        sc_desc: &wgpu::SwapChainDescriptor,
+        surface_desc: &wgpu::SurfaceConfiguration,
         label: &str,
     ) -> Self {
         let size = wgpu::Extent3d {
-            width: sc_desc.width,
-            height: sc_desc.height,
-            depth: 1
+            width: surface_desc.width,
+            height: surface_desc.height,
+            depth_or_array_layers: 1,
         };
         let desc = wgpu::TextureDescriptor {
             label: Some(label),
@@ -79,7 +81,7 @@ impl Texture {
             sample_count: 1,
             dimension: wgpu::TextureDimension::D2,
             format: Self::DEPTH_FORMAT,
-            usage: wgpu::TextureUsage::RENDER_ATTACHMENT | wgpu::TextureUsage::SAMPLED,
+            usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
         };
         let texture = device.create_texture(&desc);
 
@@ -96,20 +98,21 @@ impl Texture {
         let size = wgpu::Extent3d {
             width: dimensions.0,
             height: dimensions.1,
-            depth: 1
+            depth_or_array_layers: 1,
         };
 
         queue.write_texture(
-            wgpu::TextureCopyView {
+            wgpu::ImageCopyTexture {
                 texture: &self.texture,
                 mip_level: 0,
                 origin: wgpu::Origin3d::ZERO,
+                aspect: Default::default(),
             },
             rgba,
-            wgpu::TextureDataLayout {
+            wgpu::ImageDataLayout {
                 offset: 0,
-                bytes_per_row: 4 * dimensions.0,
-                rows_per_image: dimensions.1,
+                bytes_per_row: NonZeroU32::new(4 * dimensions.0),
+                rows_per_image: NonZeroU32::new(dimensions.1),
             },
             size,
         );

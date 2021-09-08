@@ -1,7 +1,7 @@
 mod graphics;
 mod logging;
-mod texture;
 mod shader_maps;
+mod texture;
 
 use crate::graphics::WGPUState;
 use anyhow::*;
@@ -80,7 +80,8 @@ fn main() -> Result<()> {
     let config = load_config()?;
     let mut args = std::env::args();
 
-    let debug = DEBUG_BUILD || args.any(|s| s.eq("--debug")) || config.dev_debug;
+    let debug = DEBUG_BUILD || args.any(|s| s.eq("--dbg")) || config.dev_debug;
+    let debug = debug && !(args.any(|s| s.eq("--no-dbg")));
 
     let _logging = logging::setup_log(debug)?;
     info!("Logging Check!");
@@ -169,8 +170,8 @@ fn main() -> Result<()> {
             state.update();
             match state.render() {
                 Ok(_) => {}
-                Err(wgpu::SwapChainError::Lost) => state.resize(state.size),
-                Err(wgpu::SwapChainError::OutOfMemory) => *control_flow = ControlFlow::Exit,
+                Err(wgpu::SurfaceError::Lost) => state.resize(state.size),
+                Err(wgpu::SurfaceError::OutOfMemory) => *control_flow = ControlFlow::Exit,
                 Err(e) => error!("{:?}", e),
             }
         }
