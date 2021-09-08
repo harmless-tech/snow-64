@@ -1138,9 +1138,9 @@ dependencies = [
 
 [[package]]
 name = "naga"
-version = "0.6.2"
+version = "0.6.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9b136bf483e309f330c74880370fa6f0553d9249399ac1dfa8e92c96a1612add"
+checksum = "8c5859e55c51da10b98e7a73068e0a0c5da7bbcae4fc38f86043d0c6d1b917cf"
 dependencies = [
  "bit-set",
  "bitflags",
@@ -1149,6 +1149,8 @@ dependencies = [
  "log",
  "num-traits",
  "petgraph",
+ "pp-rs",
+ "rose_tree",
  "spirv",
  "thiserror",
 ]
@@ -1448,6 +1450,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "pp-rs"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bb458bb7f6e250e6eb79d5026badc10a3ebb8f9a15d1fff0f13d17c71f4d6dee"
+dependencies = [
+ "unicode-xid",
+]
+
+[[package]]
 name = "proc-macro-crate"
 version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1590,6 +1601,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "rose_tree"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fcd16c61e9205949fa4f8a22096705b4c2f8b8025b2ff67ff6c86afd854039ae"
+dependencies = [
+ "petgraph",
+]
+
+[[package]]
 name = "rustc_version"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1722,6 +1742,7 @@ dependencies = [
  "lazy_static",
  "log",
  "log4rs",
+ "naga",
  "oxipng",
  "rayon",
  "seahash",

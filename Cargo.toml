@@ -36,6 +36,7 @@ glob = "0.3.0"
 oxipng = "5.0.0"
 rayon = "1.5.1"
 shaderc = "0.7.3"
+naga = { version = "0.6.3", features = ["glsl-in", "spv-in", "wgsl-out"] }
 
 [profile.release]
 opt-level = 3 # "z"

@@ -127,9 +127,7 @@ impl WGPUState {
             .request_device(
                 &wgpu::DeviceDescriptor {
                     label: None,
-                    features: wgpu::Features::default()
-                        | wgpu::Features::TEXTURE_BINDING_ARRAY
-                        | wgpu::Features::SPIRV_SHADER_PASSTHROUGH,
+                    features: wgpu::Features::default() | wgpu::Features::TEXTURE_BINDING_ARRAY,
                     limits: wgpu::Limits::default(),
                 },
                 None,
@@ -296,16 +294,8 @@ impl WGPUState {
         let depth_texture =
             texture::Texture::create_depth_texture(&device, &surface_desc, "Depth Texture");
 
-        let vs_module = unsafe {
-            device.create_shader_module_spirv(&wgpu::include_spirv_raw!(
-                "./assets/shaders/shader.vert.spv"
-            ))
-        };
-        let fs_module = unsafe {
-            device.create_shader_module_spirv(&wgpu::include_spirv_raw!(
-                "./assets/shaders/shader.frag.spv"
-            ))
-        };
+        let vs_module = device.create_shader_module(&wgpu::include_wgsl!("./assets/shaders/shader.vert.wgsl"));
+        let fs_module = device.create_shader_module(&wgpu::include_wgsl!("./assets/shaders/shader.frag.wgsl"));
         let render_pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Render Pipeline Layout"),

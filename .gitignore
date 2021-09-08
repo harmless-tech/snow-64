@@ -6,6 +6,7 @@
 *.oxi
 *.oxi.png
 *.spv
+*.wgsl
 
 /snow64-data
 *.log
