@@ -5,9 +5,9 @@ authors = ["harmless-tech"]
 edition = "2021"
 description = "A fantasy console."
 readme = "README.md"
-homepage = "TODO URL"
+#homepage = "" TODO: Soon.
 repository = "https://github.com/harmless-tech/snow64"
-license-file = "LICENSE"
+license = "MIT"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -15,20 +15,23 @@ license-file = "LICENSE"
 image = { version = "0.23.14", default-features = false, features = ["png"] }
 log = "0.4.14"
 log4rs = { version = "1.0.0", default-features = false, features = ["console_appender", "file_appender"] }
-winit = "0.25.0"
-anyhow = "1.0.43"
-configparser = "2.1.0"
-#lazy_static = "1.4.0"
-#seahash = "4.1.0"
-#winit_input_helper = "0.11.0"
-#snowbinary = { version = "0.1.0", features = ["v_hash"] } TODO Improve this before I use it.
-#rhai = "1.0.4"
+winit = "0.26.0"
+anyhow = "1.0.51"
+configparser = "3.0.0"
+kira = "0.6.0-beta.0"
+kira-cpal = "0.1.0-beta.0"
+pixels = "0.8.0"
+#lazy_static = "1.4.0" Maybe don't need?
+#seahash = "4.1.0" Maybe don't need?
+#winit_input_helper = "0.11.0" Maybe don't need?
+#snowbinary = { version = "0.1.0", features = ["v_hash"] } Improve this before I use it.
+#rhai = "1.2.1" Maybe switch to another scripting language?
 
 [build-dependencies]
-anyhow = "1.0.43"
+anyhow = "1.0.51"
 fs_extra = "1.2.0"
 glob = "0.3.0"
-oxipng = "5.0.0"
+oxipng = "5.0.1"
 rayon = "1.5.1"
 
 [profile.release]

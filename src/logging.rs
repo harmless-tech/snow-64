@@ -1,4 +1,4 @@
-use anyhow::*;
+use anyhow::Result;
 use log::{debug, error, info, trace, warn, LevelFilter};
 use log4rs::{
     append::{console::ConsoleAppender, file::FileAppender},
