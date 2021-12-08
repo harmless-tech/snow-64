@@ -1,12 +1,11 @@
 use anyhow::*;
-use log::{info, warn, LevelFilter, error, debug, trace};
+use log::{debug, error, info, trace, warn, LevelFilter};
 use log4rs::{
     append::{console::ConsoleAppender, file::FileAppender},
     config::{Appender, Config, Logger, Root},
     encode::pattern::PatternEncoder,
 };
 use std::fs::remove_file;
-use crate::config;
 
 //TODO Allow for log path to be changed?
 static LOG_PATH: &str = "snow64-data/snow64.log";

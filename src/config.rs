@@ -52,5 +52,7 @@ pub fn load_config() -> Result<Snow64Config> {
     let debug = DEBUG_BUILD || args.any(|s| s.eq("--dbg")) || config.dev_debug;
     let debug = debug && !(args.any(|s| s.eq("--no-dbg")));
 
+    config.dev_debug = debug;
+
     Ok(config)
 }
