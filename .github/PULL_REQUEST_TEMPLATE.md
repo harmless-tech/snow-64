@@ -3,7 +3,7 @@
 
 **Fixes**
 <!-- Put a list of fixes you made here. -->
-<!-- If it was an bug from the issue tracker remember to add the issue number here, so it can be closed. -->
+<!-- If it was a bug from the issue tracker remember to add the issue number here, so it can be closed. -->
 <!-- EX: Fixed return cache not being cleared. #15 -->
 - NONE
 

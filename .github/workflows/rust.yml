@@ -1,5 +1,4 @@
 name: Rust Build and Test
-#TODO Switch to alt rust tooling
 #TODO Add formatting check for pull requests
 
 on:

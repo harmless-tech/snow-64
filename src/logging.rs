@@ -1,11 +1,12 @@
 use anyhow::*;
-use log::{info, warn, LevelFilter};
+use log::{info, warn, LevelFilter, error, debug, trace};
 use log4rs::{
     append::{console::ConsoleAppender, file::FileAppender},
     config::{Appender, Config, Logger, Root},
     encode::pattern::PatternEncoder,
 };
 use std::fs::remove_file;
+use crate::config;
 
 //TODO Allow for log path to be changed?
 static LOG_PATH: &str = "snow64-data/snow64.log";
@@ -31,7 +32,7 @@ pub fn setup_log(debug: bool) -> Result<log4rs::Handle> {
         )))
         .build();
 
-    let fileout: FileAppender = FileAppender::builder()
+    let file_out: FileAppender = FileAppender::builder()
         .encoder(Box::new(PatternEncoder::new(
             "{h({d(%H:%M:%S)(local)} - {l}: {m}{n})}",
         )))
@@ -40,7 +41,7 @@ pub fn setup_log(debug: bool) -> Result<log4rs::Handle> {
 
     let config: Config = Config::builder()
         .appender(Appender::builder().build("stdout", Box::new(stdout)))
-        .appender(Appender::builder().build("fileout", Box::new(fileout)))
+        .appender(Appender::builder().build("fileout", Box::new(file_out)))
         .logger(Logger::builder().build("app::backend::db", LevelFilter::Trace))
         .logger(
             Logger::builder()
@@ -56,6 +57,14 @@ pub fn setup_log(debug: bool) -> Result<log4rs::Handle> {
         )?;
 
     let handle: log4rs::Handle = log4rs::init_config(config)?;
+
+    info!("Logging Check!");
+    info!("Logging Level Info: TRUE");
+    warn!("Logging Level Warn: TRUE");
+    error!("Logging Level Error: TRUE");
+    debug!("Logging Level Debug: TRUE");
+    trace!("Logging Level Trace: TRUE");
+    info!("Done!");
 
     if cleanup_log {
         info!("Previous log file deleted.")

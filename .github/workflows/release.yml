@@ -144,7 +144,7 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v2
-      - uses: seanmiddleditch/gha-setup-ninja@master
+      - uses: seanmiddleditch/gha-setup-ninja@v3
       - uses: actions/cache@v2
         with:
           path: |
