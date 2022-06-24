@@ -112,7 +112,7 @@ fn main() -> Result<()> {
 
 fn load_window_icon() -> Result<window::Icon> {
     let bytes = include_bytes!("./assets/icons/icon-512.oxi.png");
-    let img = image::load_from_memory_with_format(bytes, image::ImageFormat::Png)?;
+    let img = image::load_from_memory_with_format(bytes, image::ImageFormat::PNG)?;
     let rgba = img.as_rgba8().unwrap();
     let dimensions = img.dimensions();
 
