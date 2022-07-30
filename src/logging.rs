@@ -10,19 +10,9 @@ use std::fs::remove_file;
 //TODO Allow for log path to be changed?
 static LOG_PATH: &str = "snow64-data/snow64.log";
 
-pub fn setup_log(debug: bool) -> Result<log4rs::Handle> {
+pub fn setup_log() -> Result<log4rs::Handle> {
     // Cleanup
-    let cleanup_log = match remove_file(LOG_PATH) {
-        Ok(_) => true,
-        Err(_) => false,
-    };
-
-    let filter = if debug {
-        LevelFilter::Trace
-    }
-    else {
-        LevelFilter::Info
-    };
+    let cleanup_log = remove_file(LOG_PATH).is_ok();
 
     // Setup
     let stdout: ConsoleAppender = ConsoleAppender::builder()
@@ -46,13 +36,13 @@ pub fn setup_log(debug: bool) -> Result<log4rs::Handle> {
             Logger::builder()
                 .appender("fileout")
                 .additive(false)
-                .build("app::fileout", filter),
+                .build("app::fileout", LevelFilter::Info),
         )
         .build(
             Root::builder()
                 .appender("stdout")
                 .appender("fileout")
-                .build(filter),
+                .build(LevelFilter::Info),
         )?;
 
     let handle: log4rs::Handle = log4rs::init_config(config)?;
@@ -72,5 +62,5 @@ pub fn setup_log(debug: bool) -> Result<log4rs::Handle> {
         warn!("Previous log file could not be deleted. This could become a problem if the log file gets very long.")
     }
 
-    return Ok(handle);
+    Ok(handle)
 }

@@ -24,24 +24,21 @@ impl Default for Snow64Config {
 
 pub fn load_config() -> Result<Snow64Config> {
     let mut config = Snow64Config::default();
+    let file = Result::unwrap_or(
+        std::fs::read_to_string("./snow64-data/config.ini"),
+        "".to_string(),
+    );
 
-    let file = std::fs::read_to_string("./snow64-data/config.ini").unwrap_or("".to_string());
     if !file.is_empty() {
         let mut parser = ini::Ini::new();
-        parser.read(file).map_err(|e| Error::msg(e))?;
+        parser.read(file).map_err(Error::msg)?;
 
-        match parser
-            .getuint("display", "res")
-            .map_err(|e| Error::msg(e))?
-        {
-            None => {}
-            Some(val) => {
-                if val as u32 >= DISPLAY_RES {
-                    config.display_res = val as u32;
-                }
+        if let Some(val) = parser.getuint("display", "res").map_err(Error::msg)? {
+            if val as u32 >= DISPLAY_RES {
+                config.display_res = val as u32;
             }
         }
-        match parser.getbool("dev", "debug").map_err(|e| Error::msg(e))? {
+        match parser.getbool("dev", "debug").map_err(Error::msg)? {
             None => {}
             Some(val) => config.dev_debug = val,
         }
